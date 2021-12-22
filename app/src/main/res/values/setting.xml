@@ -1,0 +1,32 @@
+<resources>
+
+    <!--BLE service/charateristic-->
+    <string-array name="S_UUID">
+        <item>00001523-1212-efde-1523-785feabcd123</item>
+        <item>6e400001-b5a3-f393-e0a9-e50e24dcca9e</item>
+    </string-array>
+
+
+    <string-array name="C_UUID">
+        <item>00001524-1212-efde-1523-785feabcd123</item>
+        <item>6e400003-b5a3-f393-e0a9-e50e24dcca9e</item>
+    </string-array>
+
+
+    <!--BLE DATA RECEIVE SETTING-->
+    <integer name="segment_data_length">250</integer>
+
+    <integer name="sampling_rate">1000</integer>
+    <string name="period">0.001</string>
+
+    <!--PLOT LENGTH-->
+    <integer name="all_plot_length">20000</integer>
+
+
+    <!-- SharedPreference Key value for app setting -->
+    <string name="S_NAME">APP_SETTING</string>
+    <string name="S_BLUETOOTH">"MAC_ADDRESS"</string>
+
+
+
+</resources>

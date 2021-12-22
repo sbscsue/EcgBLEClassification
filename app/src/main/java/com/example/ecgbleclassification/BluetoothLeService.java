@@ -1,0 +1,303 @@
+package com.example.ecgbleclassification;
+
+import android.annotation.SuppressLint;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.Service;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCallback;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
+import android.bluetooth.BluetoothGattService;
+import android.bluetooth.BluetoothManager;
+import android.bluetooth.BluetoothProfile;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.res.Resources;
+import android.os.Binder;
+import android.os.Build;
+import android.os.IBinder;
+import android.util.Log;
+import android.widget.Toast;
+
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
+
+import java.util.UUID;
+
+public class BluetoothLeService extends Service {
+    //values
+    final String SERVICE_TAG = "BLE_SERVICE_CHECK";
+    final String GATT_TAG = "GATT_CHECK";
+
+    private boolean gattConnectionState = false;
+    private String mac_address;
+    BluetoothDevice device;
+
+    //default
+    private Resources res;
+
+    private NotificationManagerCompat notiManager;
+
+    private SharedPreferences preferences;
+    private SharedPreferences.Editor editor;
+
+
+    //ble
+    BluetoothManager manager;
+    BluetoothAdapter bluetoothAdapter;
+    BluetoothGatt bluetoothGatt;
+
+    //service
+    Intent intent;
+
+
+
+
+
+
+    public BluetoothLeService() {
+
+    }
+
+    IBinder serviceBinder = new BleBinder();
+
+    class BleBinder extends Binder {
+        BluetoothLeService getService() {
+            return BluetoothLeService.this;
+        }
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return serviceBinder;
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        Log.i(SERVICE_TAG,"CREATE SERVICE");
+
+        //DEFALT
+        res = getResources();
+
+        preferences = getSharedPreferences(getString(R.string.S_NAME),Context.MODE_PRIVATE);
+        editor = preferences.edit();
+
+        manager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        bluetoothAdapter = manager.getAdapter();
+
+        //SERVICE
+        intent = new Intent(getApplicationContext(),EcgProcess.class);
+
+            //계속 켜지게
+            //startForegroundService();
+
+        //BLE
+        getDevice();
+        if(mac_address!=null){
+            Log.i(SERVICE_TAG,"FISRT BLE CONNECT - SUCESS");
+            connect();
+        }
+        else{
+            Log.i(SERVICE_TAG,"FIRST BLE CONNECT - FAIL ");
+            Toast.makeText(this, R.string.mac_address_empty, Toast.LENGTH_SHORT).show();
+        }
+
+    }
+
+    @SuppressLint("MissingPermission")
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        Log.i(SERVICE_TAG,"DESTROY SERVICE");
+        disconnect();
+
+    }
+
+    //bluetooth
+    public void getDevice(){
+        Log.i(SERVICE_TAG,"GET BLE DEVICE");
+
+        String check = null;
+        mac_address = preferences.getString(res.getString(R.string.S_BLUETOOTH),check);
+        device = bluetoothAdapter.getRemoteDevice(mac_address);
+
+        Log.i(SERVICE_TAG,mac_address);
+    }
+
+    @SuppressLint("MissingPermission")
+    public void setDevice(BluetoothDevice device){
+        Log.i(SERVICE_TAG,"SET BLE DEVICE");
+
+        editor.putString(res.getString(R.string.S_BLUETOOTH),device.getAddress());
+        editor.commit();
+
+        disconnect();
+        getDevice();
+        connect();
+    }
+
+    public boolean getConnectState(){
+        return gattConnectionState;
+    }
+
+    @SuppressLint("MissingPermission")
+    public void connect(){
+        Log.i(SERVICE_TAG,"CONNECT GATT SERVER");
+        if(gattConnectionState==false){
+            bluetoothGatt = device.connectGatt(this,true,gattCallback);
+            if(bluetoothGatt.connect()==true){
+                Log.i(SERVICE_TAG,"TRUE");
+                gattConnectionState = true;
+            }
+            else{
+                gattConnectionState = false;
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    public void disconnect(){
+        Log.i(SERVICE_TAG,"DISCONNECT GATT SERVER");
+        if(gattConnectionState){
+            Log.i(SERVICE_TAG,"TRUE");
+            bluetoothGatt.disconnect();
+            bluetoothGatt.close();
+            gattConnectionState = false;
+            stopService(intent);
+        }
+
+    }
+
+
+
+
+
+
+    private BluetoothGattCallback gattCallback= new BluetoothGattCallback(){
+        @SuppressLint("MissingPermission")
+        @Override
+        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+            super.onConnectionStateChange(gatt, status, newState);
+            Log.i(GATT_TAG,"GATT SERVER CONNECT CHANGE");
+            if(newState==BluetoothProfile.STATE_DISCONNECTED){
+                Log.i(GATT_TAG,"GATT SERVER DISCONNECTED");
+            }
+            if(newState==BluetoothProfile.STATE_CONNECTED){
+                Log.i(GATT_TAG,"GATT SERVER CONNECTED");
+                gatt.discoverServices();
+            }
+        }
+
+        @SuppressLint("MissingPermission")
+        @Override
+        public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+            super.onServicesDiscovered(gatt, status);
+            Log.i(GATT_TAG, "SERVICES IS DISCOVERED");
+
+            String[] s_uuid = res.getStringArray(R.array.S_UUID);
+            String[] c_uuid = res.getStringArray(R.array.C_UUID);
+
+            for(int i =0; i<s_uuid.length; i++){
+                Log.i(GATT_TAG,s_uuid[i]);
+                BluetoothGattService service = bluetoothGatt.getService(UUID.fromString(s_uuid[i]));
+                if (service != null){
+                    BluetoothGattCharacteristic charac = service.getCharacteristic(UUID.fromString(c_uuid[i]));
+                    if (charac != null){
+                        //notifi
+                        gatt.setCharacteristicNotification(charac,true);
+                        //startService(intent);
+                        //descripter
+                        for(BluetoothGattDescriptor des : charac.getDescriptors()){
+                            Log.i(GATT_TAG,"SET DESCRIPTOR");
+                            des.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                            gatt.writeDescriptor(des);
+                            break;
+                        }
+
+
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+            super.onCharacteristicChanged(gatt, characteristic);
+            Log.i(GATT_TAG,"GATT DATA NOTIFY");
+
+            byte[] data = characteristic.getValue();
+            send_ble_data(data);
+        }
+
+
+        @Override
+        public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+            super.onDescriptorWrite(gatt, descriptor, status);
+            Log.i(GATT_TAG,"NOTIFY SET");
+        }
+
+
+        @Override
+        public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+            super.onCharacteristicRead(gatt, characteristic, status);
+            Log.i(GATT_TAG,"GATT DATA READ");
+        }
+
+    };
+
+
+    private void send_ble_data(byte[] data){
+        Intent intent1 = new Intent("toGraph");
+        intent1.putExtra("BLE_DATA",data);
+        sendBroadcast(intent1);
+
+
+        Intent intent2 = new Intent("toService");
+        intent2.putExtra("BLE_DATA",data);
+        sendBroadcast(intent2);
+
+
+
+    }
+
+
+    NotificationCompat.Builder builder1 = new NotificationCompat.Builder(this,"CONNECT_STATE")
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("ECG MONITORING DEVICE")
+            .setContentText("BLE NOT CONNECT");
+
+
+    NotificationCompat.Builder builder2 = new NotificationCompat.Builder(this,"CONNECT_STATE")
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("ECG MONITORING DEVICE")
+            .setContentText("BLE CONNECT");
+
+    //종료 안됨!
+    void startForegroundService() {
+        Intent notificationIntent = new Intent(this, ScanActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+
+
+        if (Build.VERSION.SDK_INT >= 26) {
+            String CHANNEL_ID = "CONNECT_STATE";
+
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID,
+                    "CONNECT STATE",
+                    NotificationManager.IMPORTANCE_DEFAULT);
+
+            ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE))
+                    .createNotificationChannel(channel);
+
+        }
+        startForeground(1, builder1.build());
+    }
+}
+
+
+

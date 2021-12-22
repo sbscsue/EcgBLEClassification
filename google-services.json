@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "374464071470",
+    "firebase_url": "https://ecge-c3594-default-rtdb.firebaseio.com",
+    "project_id": "ecge-c3594",
+    "storage_bucket": "ecge-c3594.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:374464071470:android:978fe581f6579384a5dcbf",
+        "android_client_info": {
+          "package_name": "com.example.ecgbleclassification"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "374464071470-du7815apndd4rn3dj4bfftke77chtv89.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATzVz8p9kR3ta5xCiLSs0IplN1dc5SEtI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "374464071470-du7815apndd4rn3dj4bfftke77chtv89.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">EcgBLEClassification</string>
+
+
+    <!--for Toast message-->
+    <string name="bluetooth_off">Please bluetooth ON</string>
+
+    <string name="bluetooth_not_supporting">Not allowed BLUETOOTH.</string>
+    <string name="ble_not_supporting">Not allowed BLE.</string>
+    <string name="gatt_server_not_supporting">gatt server error</string>
+
+    <string name="gatt_server_not_connecting">gatt_server_not_connecting</string>
+
+
+    <string name="mac_address_empty">Please set Mac Address</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+
+
+</resources>
