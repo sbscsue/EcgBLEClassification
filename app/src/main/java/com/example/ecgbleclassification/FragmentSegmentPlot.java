@@ -1,64 +1,89 @@
 package com.example.ecgbleclassification;
 
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.res.Resources;
+import android.graphics.Color;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-/**
- * A simple {@link Fragment} subclass.
- * Use the {@link FragmentSegmentPlot#newInstance} factory method to
- * create an instance of this fragment.
- */
+import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.data.Entry;
+import com.github.mikephil.charting.data.LineData;
+import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
+
+import java.util.ArrayList;
+import java.util.List;
+
+
 public class FragmentSegmentPlot extends Fragment {
+    Resources res;
 
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
+    //plot
+    int SEGMENT_LENGTH;
 
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
+    private LineChart chart;
+    ArrayList<Entry> chart_entry = new ArrayList<Entry>();
+    List<ILineDataSet> chart_set = new ArrayList<ILineDataSet>();
+    LineData chart_data;
+
+
+    //receiver
+    Receiver receiver;
+    IntentFilter theFilter;
+
+
 
     public FragmentSegmentPlot() {
         // Required empty public constructor
     }
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment SegmentPlotFragment.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static FragmentSegmentPlot newInstance(String param1, String param2) {
-        FragmentSegmentPlot fragment = new FragmentSegmentPlot();
-        Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
-        fragment.setArguments(args);
-        return fragment;
-    }
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
-        }
+
+        res = getResources();
+
+        SEGMENT_LENGTH = res.getInteger(R.integer.segment_length);
+
+        theFilter = new IntentFilter();
+        theFilter.addAction("SEGMENT_PLOT");
+
+        receiver = new Receiver(){
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                super.onReceive(context, intent);
+                if(intent.getAction().equals("SEGMENT_PLOT")){
+                    Log.i(BROADCAST_TAG,intent.getAction());
+                    //plot(intent.getByteArrayExtra("BLE_DATA"));
+                }
+            }
+        };
+
+
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_segment_plot, container, false);
+        View view = inflater.inflate(R.layout.fragment_segment_plot, container, false);
+
+        chart = view.findViewById(R.id.chartSegment);
+        chart.setBackgroundColor(Color.WHITE);
+        chart.getDescription().setEnabled(false);
+        chart.setTouchEnabled(true);
+
+        requireActivity().registerReceiver(receiver,theFilter);
+
+        return view;
     }
 }

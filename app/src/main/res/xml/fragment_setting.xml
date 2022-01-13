@@ -1,0 +1,26 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory app:title="Bluetooth">
+
+
+        <SwitchPreference
+            android:key=""
+            android:title=""
+            />
+
+    </PreferenceCategory>
+
+
+    <PreferenceCategory app:title="Service">
+
+
+        <SwitchPreference
+            android:key=""
+            android:title=""
+            />
+
+    </PreferenceCategory>
+
+
+</PreferenceScreen>

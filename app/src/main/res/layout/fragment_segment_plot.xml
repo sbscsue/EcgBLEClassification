@@ -5,10 +5,22 @@
     android:layout_height="match_parent"
     tools:context=".FragmentSegmentPlot">
 
-    <!-- TODO: Update blank fragment layout -->
     <TextView
+        android:id ="@+id/segmentIndex"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="20dp"
+        />
+    <TextView
+        android:id ="@+id/bpm"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="20dp"
+        />
+
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/chartSegment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:text="@string/hello_blank_fragment" />
-
+        android:layout_above="@+id/LineChart" />
 </FrameLayout>

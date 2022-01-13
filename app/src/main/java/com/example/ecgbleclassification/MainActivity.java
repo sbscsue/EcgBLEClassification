@@ -2,24 +2,34 @@ package com.example.ecgbleclassification;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
 
     BottomNavigationView bottomNavigationView;
+
+    BluetoothManager manager;
+    BluetoothAdapter bluetoothAdapter;
 
     private BluetoothLeService bleService;
     ServiceConnection conn = new ServiceConnection() {
@@ -45,12 +55,34 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         Intent intent = new Intent(MainActivity.this,BluetoothLeService.class);
-        getApplicationContext().bindService(intent,conn, Context.BIND_AUTO_CREATE);
+        startService(intent);
+        //getApplicationContext().bindService(intent,conn, Context.BIND_AUTO_CREATE);
+
+        //SERVICE
+        intent = new Intent(getApplicationContext(),EcgProcess.class);
+        startService(intent);
 
         FragmentManager fragmentManager = getSupportFragmentManager();
         Fragment frag1 = new FragmentMain();
 
         fragmentManager.beginTransaction().replace(R.id.fragment,frag1).commit();
+
+        manager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        bluetoothAdapter = manager.getAdapter();
+        //permmision and bluetooth on check
+        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH)) {
+            Toast.makeText(this, R.string.bluetooth_not_supporting, Toast.LENGTH_SHORT).show();
+            finish();
+        }
+
+        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+            Toast.makeText(this, R.string.ble_not_supporting, Toast.LENGTH_SHORT).show();
+            finish();
+        }
+
+        if (!bluetoothAdapter.isEnabled()) {
+            Toast.makeText(this, R.string.bluetooth_off, Toast.LENGTH_SHORT).show();
+        }
 
 
         bottomNavigationView = (BottomNavigationView)findViewById(R.id.bottom_menu_bar);

@@ -14,18 +14,23 @@
 
 
     <!--BLE DATA RECEIVE SETTING-->
-    <integer name="segment_data_length">250</integer>
-
-    <integer name="sampling_rate">1000</integer>
-    <string name="period">0.001</string>
+    <integer name="data_length">250</integer>
+    <integer name="sampling_rate">10000</integer>
+    <string name="period">0.0001</string>
 
     <!--PLOT LENGTH-->
     <integer name="all_plot_length">20000</integer>
+
+    <!--WINDOW SETTING-->
+    <integer name="window_length">100000</integer>
+    <!--SEGMENT LENGTH(half)-->
+    <integer name="segment_length">4000</integer>
 
 
     <!-- SharedPreference Key value for app setting -->
     <string name="S_NAME">APP_SETTING</string>
     <string name="S_BLUETOOTH">"MAC_ADDRESS"</string>
+
 
 
 
