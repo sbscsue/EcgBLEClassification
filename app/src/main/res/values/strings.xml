@@ -2,33 +2,14 @@
     <string name="app_name">EcgBLEClassification</string>
 
 
-    <!--for Toast message-->
-    <string name="bluetooth_off">Please bluetooth ON</string>
-
-    <string name="bluetooth_not_supporting">Not allowed BLUETOOTH.</string>
-    <string name="ble_not_supporting">Not allowed BLE.</string>
-    <string name="gatt_server_not_supporting">gatt server error</string>
-
-    <string name="gatt_server_not_connecting">gatt_server_not_connecting</string>
+    <string name = "bluetooth_not_supporting">Not allowed BLUETOOTH.</string>
+    <string name = "ble_not_supporting">Not allowed BLE.</string>
+    <string name = "gatt_server_not_supporting">gatt server error</string>
+    <string name = "bluetooth_off">Please bluetooth ON</string>
 
 
-    <string name="mac_address_empty">Please set Mac Address</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
-    <!-- Preference Titles -->
-    <string name="messages_header">Messages</string>
-    <string name="sync_header">Sync</string>
 
-    <!-- Messages Preferences -->
-    <string name="signature_title">Your signature</string>
-    <string name="reply_title">Default reply action</string>
-
-    <!-- Sync Preferences -->
-    <string name="sync_title">Sync email periodically</string>
-    <string name="attachment_title">Download incoming attachments</string>
-    <string name="attachment_summary_on">Automatically download attachments for incoming emails
-    </string>
-    <string name="attachment_summary_off">Only download attachments when manually requested</string>
+    <string name = "TWO_SENSOR_SERVICES_UUID">00001523-1212-efde-1523-785feabcd123</string>
 
 
 </resources>
