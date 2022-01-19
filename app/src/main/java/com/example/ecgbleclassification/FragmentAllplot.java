@@ -33,23 +33,12 @@ import java.util.List;
 public class FragmentAllplot extends Fragment {
     Resources res;
 
+
+    //plot
     int DATA_LENGTH;
     int SAMPLING_LATE;
     float PERIOD;
     int PLOT_LENGTH ;
-
-
-    final int PERMISSION_REQUEST_BLUETOOTH_CONNECT = 1;
-
-    final String GATT_TAG = "GATT";
-
-    BluetoothManager manager;
-    BluetoothAdapter adapter;
-    ActivityReceiver receiver;
-    IntentFilter theFilter;
-
-
-
 
 
     int flag = 0;
@@ -57,6 +46,11 @@ public class FragmentAllplot extends Fragment {
     ArrayList<Entry> chart_entry = new ArrayList<Entry>();
     List<ILineDataSet> chart_set = new ArrayList<ILineDataSet>();
     LineData chart_data;
+
+
+
+    Receiver receiver;
+    IntentFilter theFilter;
 
 
 
@@ -80,23 +74,15 @@ public class FragmentAllplot extends Fragment {
         PLOT_LENGTH = res.getInteger(R.integer.all_plot_length);
 
 
-        manager = (BluetoothManager) getActivity().getSystemService(Context.BLUETOOTH_SERVICE);
-        adapter = manager.getAdapter();
-
-
-        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(getActivity(),new String[]{Manifest.permission.BLUETOOTH_CONNECT}, PERMISSION_REQUEST_BLUETOOTH_CONNECT);
-        }
-
 
         theFilter = new IntentFilter();
-        theFilter.addAction("toGraph");
+        theFilter.addAction("BLE");
 
-        receiver = new ActivityReceiver(){
+        receiver = new Receiver(){
             @Override
             public void onReceive(Context context, Intent intent) {
                 super.onReceive(context, intent);
-                if(intent.getAction().equals("toGraph")){
+                if(intent.getAction().equals("BLE")){
                     Log.i(BROADCAST_TAG,intent.getAction());
                     plot(intent.getByteArrayExtra("BLE_DATA"));
                 }
@@ -112,7 +98,7 @@ public class FragmentAllplot extends Fragment {
 
 
 
-        chart = view.findViewById(R.id.chart);
+        chart = view.findViewById(R.id.chartAll);
         chart.setBackgroundColor(Color.WHITE);
         chart.getDescription().setEnabled(false);
         chart.setTouchEnabled(true);

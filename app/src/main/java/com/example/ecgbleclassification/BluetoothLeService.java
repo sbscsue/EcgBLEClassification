@@ -93,19 +93,16 @@ public class BluetoothLeService extends Service {
 
         //SERVICE
         intent = new Intent(getApplicationContext(),EcgProcess.class);
+        startService(intent);
 
             //계속 켜지게
             //startForegroundService();
 
         //BLE
         getDevice();
-        if(mac_address!=null){
-            Log.i(SERVICE_TAG,"FISRT BLE CONNECT - SUCESS");
+        if(mac_address!=null) {
+            Log.i(SERVICE_TAG, "FISRT BLE CONNECT - SUCESS");
             connect();
-        }
-        else{
-            Log.i(SERVICE_TAG,"FIRST BLE CONNECT - FAIL ");
-            Toast.makeText(this, R.string.mac_address_empty, Toast.LENGTH_SHORT).show();
         }
 
     }
@@ -125,9 +122,14 @@ public class BluetoothLeService extends Service {
 
         String check = null;
         mac_address = preferences.getString(res.getString(R.string.S_BLUETOOTH),check);
-        device = bluetoothAdapter.getRemoteDevice(mac_address);
+        if(mac_address==null){
+            Toast.makeText(this,R.string.mac_address_empty,Toast.LENGTH_SHORT).show();
+        }
+        else{
+            device = bluetoothAdapter.getRemoteDevice(mac_address);
+            Log.i(SERVICE_TAG,mac_address);
+        }
 
-        Log.i(SERVICE_TAG,mac_address);
     }
 
     @SuppressLint("MissingPermission")
@@ -147,6 +149,7 @@ public class BluetoothLeService extends Service {
     }
 
     @SuppressLint("MissingPermission")
+    //디바이스 등록안해놓고 접근할때 오류 !
     public void connect(){
         Log.i(SERVICE_TAG,"CONNECT GATT SERVER");
         if(gattConnectionState==false){
@@ -253,17 +256,9 @@ public class BluetoothLeService extends Service {
 
 
     private void send_ble_data(byte[] data){
-        Intent intent1 = new Intent("toGraph");
-        intent1.putExtra("BLE_DATA",data);
-        sendBroadcast(intent1);
-
-
-        Intent intent2 = new Intent("toService");
-        intent2.putExtra("BLE_DATA",data);
-        sendBroadcast(intent2);
-
-
-
+        Intent intent = new Intent("BLE");
+        intent.putExtra("BLE_DATA",data);
+        sendBroadcast(intent);
     }
 
 

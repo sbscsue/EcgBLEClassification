@@ -14,13 +14,18 @@
 
 
     <!--BLE DATA RECEIVE SETTING-->
-    <integer name="segment_data_length">250</integer>
+    <integer name="segment_data_length">50</integer>
 
-    <integer name="sampling_rate">1000</integer>
-    <string name="period">0.001</string>
+    <integer name="sampling_rate">400</integer>
+    <string name="period">0.025</string>
 
     <!--PLOT LENGTH-->
-    <integer name="all_plot_length">20000</integer>
+    <integer name="all_plot_length">4000</integer>
+
+    <!--WINDOW SETTING-->
+    <integer name="window_length">4000</integer>
+    <!--SEGMENT LENGTH(half)-->
+    <integer name="segment_length">160</integer>
 
 
     <!-- SharedPreference Key value for app setting -->

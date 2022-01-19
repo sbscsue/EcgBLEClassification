@@ -89,6 +89,8 @@ public class ScanActivity extends AppCompatActivity {
         manager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = manager.getAdapter();
 
+
+
         ScanListView = findViewById(R.id.ScansList);
         ScanListView.setAdapter(adpater);
         ScanListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -117,20 +119,7 @@ public class ScanActivity extends AppCompatActivity {
         });
 
 
-        //permmision and bluetooth on check
-        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH)) {
-            Toast.makeText(this, R.string.bluetooth_not_supporting, Toast.LENGTH_SHORT).show();
-            finish();
-        }
 
-        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-            Toast.makeText(this, R.string.ble_not_supporting, Toast.LENGTH_SHORT).show();
-            finish();
-        }
-
-        if (!bluetoothAdapter.isEnabled()) {
-            Toast.makeText(this, R.string.bluetooth_off, Toast.LENGTH_SHORT).show();
-        }
 
     }
 
@@ -150,6 +139,7 @@ public class ScanActivity extends AppCompatActivity {
     @SuppressLint("MissingPermission")
     private void scanLeDevice(final boolean enable) {
         if (enable) {
+            Log.d("bluetoothenable","true");
             // Stops scanning after a pre-defined scan period.
             handler.postDelayed(new Runnable() {
                 @Override
@@ -163,6 +153,7 @@ public class ScanActivity extends AppCompatActivity {
             mScanning = true;
             bluetoothAdapter.startLeScan(leScanCallback);
         } else {
+            Log.d("bluetoothenable","false");
             mScanning = false;
             bluetoothAdapter.stopLeScan(leScanCallback);
         }
