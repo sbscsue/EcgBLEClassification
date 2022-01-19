@@ -211,7 +211,7 @@ public class BluetoothLeService extends Service {
                     if (charac != null){
                         //notifi
                         gatt.setCharacteristicNotification(charac,true);
-                        startService(intent);
+                        //startService(intent);
                         //descripter
                         for(BluetoothGattDescriptor des : charac.getDescriptors()){
                             Log.i(GATT_TAG,"SET DESCRIPTOR");

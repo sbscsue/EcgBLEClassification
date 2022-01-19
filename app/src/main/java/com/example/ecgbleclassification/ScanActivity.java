@@ -100,13 +100,7 @@ public class ScanActivity extends AppCompatActivity {
                 BluetoothDevice device = bluetoothAdapter.getRemoteDevice(deviceList.get(position));
                 bleService.setDevice(device);
 
-                if(bleService.getConnectState()){
-                    Intent intent = new Intent(ScanActivity.this,ServiceActivity.class);
-                    startActivity(intent);
-                }
-                else{
-                    //Toast.makeText(this,R.string.gatt_server_not_supporting,Toast.LENGTH_SHORT).show();
-                }
+                finish();
 
 
             }

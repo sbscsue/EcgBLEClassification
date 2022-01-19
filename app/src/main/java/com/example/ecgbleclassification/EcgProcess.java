@@ -11,7 +11,6 @@ import android.os.IBinder;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -29,7 +28,6 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.concurrent.Executor;
 
 public class EcgProcess extends Service {
     final String SERVICE_TAG = "ECG_SERVICE_CHECK";
@@ -38,7 +36,7 @@ public class EcgProcess extends Service {
     boolean predictFlag = false;
 
     //Broadcast Receiver
-    BLEReceiver receiver;
+    ActivityReceiver receiver;
 
     //firebase
     int DATA_LENGTH;
@@ -52,6 +50,10 @@ public class EcgProcess extends Service {
     private FirebaseDatabase mdb;
     DatabaseReference parent;
 
+
+    //ecg data
+    float[] data = new float[10000];
+    int flag = 0;
 
     //tensorflow
     private Interpreter interpreter;
@@ -78,17 +80,17 @@ public class EcgProcess extends Service {
         super.onCreate();
         Log.i(SERVICE_TAG,"START SERVICE");
 
-        //value for firebase
         res = getResources();
         DATA_LENGTH =  res.getInteger(R.integer.segment_data_length);
         SAMPLING_LATE =  res.getInteger(R.integer.sampling_rate);
         PERIOD = Float.valueOf(res.getString(R.string.period));
         PLOT_LENGTH = res.getInteger(R.integer.all_plot_length);
 
+
         //broadcast receiver
         final IntentFilter theFilter = new IntentFilter();
         theFilter.addAction("toService");
-        receiver = new BLEReceiver(){
+        receiver = new ActivityReceiver(){
             @Override
             public void onReceive(Context context, Intent intent) {
                 super.onReceive(context, intent);
@@ -120,9 +122,8 @@ public class EcgProcess extends Service {
                     }
                 }
             }
-            
-        });
 
+        });
 
     }
 
@@ -139,14 +140,32 @@ public class EcgProcess extends Service {
     private void setSave(){
 
     }
-    private void save(){
-
-    }
-
 
     private void setPredict(){
 
     }
+
+    //data preprocessing
+
+    public void saveSegment(){
+
+
+    }
+
+    public void peakDetection{
+
+
+    }
+
+
+    public void toTensor(){
+
+    }
+
+
+
+
+    //tensorflow lite
     private void peakDetection(){
 
     }
@@ -156,7 +175,6 @@ public class EcgProcess extends Service {
 
         return output;
     }
-
 
 
 

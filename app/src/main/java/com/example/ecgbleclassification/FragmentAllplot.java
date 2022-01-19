@@ -1,63 +1,36 @@
 package com.example.ecgbleclassification;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
-import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothGatt;
-import android.bluetooth.BluetoothGattCallback;
-import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattDescriptor;
-import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
-import android.bluetooth.BluetoothProfile;
-import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.os.IBinder;
-import android.os.NetworkOnMainThreadException;
-import android.util.Log;
-import android.widget.TextView;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.fragment.app.Fragment;
+
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.FirebaseApp;
-import com.google.firebase.auth.AuthResult;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 
-import java.sql.Time;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 
-public class ServiceActivity extends AppCompatActivity {
-
+public class FragmentAllplot extends Fragment {
     Resources res;
 
     int DATA_LENGTH;
@@ -72,7 +45,8 @@ public class ServiceActivity extends AppCompatActivity {
 
     BluetoothManager manager;
     BluetoothAdapter adapter;
-    BLEReceiver receiver;
+    ActivityReceiver receiver;
+    IntentFilter theFilter;
 
 
 
@@ -87,13 +61,17 @@ public class ServiceActivity extends AppCompatActivity {
 
 
 
-    int count = 0;
-    TextView sample;
+
+
+    public FragmentAllplot() {
+        // Required empty public constructor
+    }
+
+
 
     @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
+    public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.service);
 
         res = getResources();
         DATA_LENGTH =  res.getInteger(R.integer.segment_data_length);
@@ -102,11 +80,19 @@ public class ServiceActivity extends AppCompatActivity {
         PLOT_LENGTH = res.getInteger(R.integer.all_plot_length);
 
 
+        manager = (BluetoothManager) getActivity().getSystemService(Context.BLUETOOTH_SERVICE);
+        adapter = manager.getAdapter();
 
-        final IntentFilter theFilter = new IntentFilter();
+
+        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(getActivity(),new String[]{Manifest.permission.BLUETOOTH_CONNECT}, PERMISSION_REQUEST_BLUETOOTH_CONNECT);
+        }
+
+
+        theFilter = new IntentFilter();
         theFilter.addAction("toGraph");
 
-        receiver = new BLEReceiver(){
+        receiver = new ActivityReceiver(){
             @Override
             public void onReceive(Context context, Intent intent) {
                 super.onReceive(context, intent);
@@ -116,18 +102,23 @@ public class ServiceActivity extends AppCompatActivity {
                 }
             }
         };
-        registerReceiver(receiver,theFilter);
+
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.fragment_allplot, container, false);
 
 
-        //Log.i("check_user",mAuth.getCurrentUser().toString());
-        //Log.i("check_user", String.valueOf(mAuth.getCurrentUser().isAnonymous()));
 
-
-
-        chart = findViewById(R.id.chart);
+        chart = view.findViewById(R.id.chart);
         chart.setBackgroundColor(Color.WHITE);
         chart.getDescription().setEnabled(false);
         chart.setTouchEnabled(true);
+
+        requireActivity().registerReceiver(receiver,theFilter);
+
         //x,y축 고정
 
         for(int i=0; i< PLOT_LENGTH; i++){
@@ -145,28 +136,20 @@ public class ServiceActivity extends AppCompatActivity {
         chart.setData(chart_data);
         chart.invalidate();
 
-
-
-        manager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-        adapter = manager.getAdapter();
-
-
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(ServiceActivity.this,new String[]{Manifest.permission.BLUETOOTH_CONNECT}, PERMISSION_REQUEST_BLUETOOTH_CONNECT);
-        }
-
-        //bleService.connect();
+        return view;
     }
 
-
-    @SuppressLint("MissingPermission")
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        unregisterReceiver(receiver);
+    public void onPause() {
+        super.onPause();
+        requireActivity().unregisterReceiver(receiver);
     }
 
-
+    @Override
+    public void onResume() {
+        super.onResume();
+        requireActivity().registerReceiver(receiver,theFilter);
+    }
 
     public void plot(byte[] data){
         //Log.i("plot",data.toString());

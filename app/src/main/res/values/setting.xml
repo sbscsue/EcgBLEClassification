@@ -25,7 +25,9 @@
 
     <!-- SharedPreference Key value for app setting -->
     <string name="S_NAME">APP_SETTING</string>
+
     <string name="S_BLUETOOTH">"MAC_ADDRESS"</string>
+
 
 
 
