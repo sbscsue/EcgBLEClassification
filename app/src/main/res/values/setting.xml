@@ -1,4 +1,22 @@
 <resources>
+    <!--model setting-->
+    <integer name="modelInputShape">320</integer>
+    <integer name="modelOutputShape">3</integer>
+    <string-array name="AAMI_ANN">
+        <item>N</item>
+        <item>S</item>
+        <item>V</item>
+        <item>F</item>
+        <item>Q</item>
+    </string-array>
+
+    <string-array name="NSV_ANN">
+        <item>N</item>
+        <item>S</item>
+        <item>V</item>
+    </string-array>
+
+
 
     <!--BLE service/charateristic-->
     <string-array name="S_UUID">
@@ -12,19 +30,17 @@
         <item>6e400003-b5a3-f393-e0a9-e50e24dcca9e</item>
     </string-array>
 
-
     <!--BLE DATA RECEIVE SETTING-->
-    <integer name="data_length">250</integer>
-    <integer name="sampling_rate">10000</integer>
-    <string name="period">0.0001</string>
+    <integer name="data_length">50</integer>
+    <integer name="sampling_rate">400</integer>
+    <string name="period">0.0025</string>
 
     <!--PLOT LENGTH-->
-    <integer name="all_plot_length">20000</integer>
-
+    <integer name="all_plot_length">4000</integer>
     <!--WINDOW SETTING-->
-    <integer name="window_length">100000</integer>
+    <integer name="window_length">4000</integer>
     <!--SEGMENT LENGTH(half)-->
-    <integer name="segment_length">4000</integer>
+    <integer name="segment_length">160</integer>
 
 
     <!-- SharedPreference Key value for app setting -->

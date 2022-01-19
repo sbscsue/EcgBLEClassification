@@ -19,12 +19,15 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
+
+import org.w3c.dom.Text;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +41,7 @@ public class FragmentAllplot extends Fragment {
     int DATA_LENGTH;
     int SAMPLING_LATE;
     float PERIOD;
+
     int PLOT_LENGTH ;
 
 
@@ -47,7 +51,8 @@ public class FragmentAllplot extends Fragment {
     List<ILineDataSet> chart_set = new ArrayList<ILineDataSet>();
     LineData chart_data;
 
-
+    TextView bpmView;
+    TextView predictView;
 
     Receiver receiver;
     IntentFilter theFilter;
@@ -78,14 +83,20 @@ public class FragmentAllplot extends Fragment {
 
         theFilter = new IntentFilter();
         theFilter.addAction("BLE");
+        theFilter.addAction("INFORMATION");
 
         receiver = new Receiver(){
             @Override
             public void onReceive(Context context, Intent intent) {
                 super.onReceive(context, intent);
                 if(intent.getAction().equals("BLE")){
-                    Log.i(BROADCAST_TAG,intent.getAction());
+                    //Log.i(BROADCAST_TAG,intent.getAction());
                     plot(intent.getByteArrayExtra("BLE_DATA"));
+                }
+                if(intent.getAction().equals("INFORMATION")){
+                    Log.i(BROADCAST_TAG,intent.getAction());
+                    bpmView.setText(String.valueOf(intent.getIntExtra("BPM",0)));
+                    predictView.setText(String.valueOf((intent.getStringExtra("PREDICT"))));
                 }
             }
         };
@@ -124,6 +135,8 @@ public class FragmentAllplot extends Fragment {
         chart.setData(chart_data);
         chart.invalidate();
 
+        bpmView = view.findViewById(R.id.bpmAll);
+        predictView = view.findViewById(R.id.predictAll);
 
         requireActivity().registerReceiver(receiver,theFilter);
         Log.d("checkcheck","plot초기화 끝");
@@ -148,13 +161,9 @@ public class FragmentAllplot extends Fragment {
         for(int i=0; i<DATA_LENGTH; i+=1){
             //Log.i("data", String.valueOf((float)(data[i] & 0xff)));
             Entry d = new Entry();
+
             d.setX(chart_entry.get(i+flag).getX());
-            if(i<244){
-                d.setY((float)(data[i] & 0xff));
-            }
-            else{
-                d.setY((float)(data[243] & 0xff));
-            }
+            d.setY((float)(data[i] & 0xff));
 
             chart_entry.set(i+flag,d);
         }
@@ -173,8 +182,6 @@ public class FragmentAllplot extends Fragment {
 
         chart.setData(chart_data);
         chart.invalidate();
-
-
     }
 
 

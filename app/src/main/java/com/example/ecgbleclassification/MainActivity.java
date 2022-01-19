@@ -28,6 +28,9 @@ public class MainActivity extends AppCompatActivity {
 
     BottomNavigationView bottomNavigationView;
 
+
+    Intent intent1;
+    Intent intent2;
     BluetoothManager manager;
     BluetoothAdapter bluetoothAdapter;
 
@@ -49,18 +52,20 @@ public class MainActivity extends AppCompatActivity {
     };
 
 
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Intent intent = new Intent(MainActivity.this,BluetoothLeService.class);
-        startService(intent);
+        intent1 = new Intent(MainActivity.this,BluetoothLeService.class);
+        startService(intent1);
         //getApplicationContext().bindService(intent,conn, Context.BIND_AUTO_CREATE);
 
         //SERVICE
-        intent = new Intent(getApplicationContext(),EcgProcess.class);
-        startService(intent);
+        intent2 = new Intent(getApplicationContext(), EcgProcess.class);
+        startService(intent2);
 
         FragmentManager fragmentManager = getSupportFragmentManager();
         Fragment frag1 = new FragmentMain();
@@ -118,9 +123,13 @@ public class MainActivity extends AppCompatActivity {
 
                 }
         );
+    }
 
-
-
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        stopService(intent1);
+        stopService(intent2);
     }
 
 }
