@@ -10,10 +10,13 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -34,7 +37,6 @@ public class ScanActivity extends AppCompatActivity {
     private static final long SCAN_PERIOD = 10000;
     boolean mScanning;
 
-
     private BluetoothLeService bleService;
     ServiceConnection conn = new ServiceConnection() {
         @Override
@@ -53,6 +55,7 @@ public class ScanActivity extends AppCompatActivity {
     };
 
 
+    Resources res;
 
 
     Button scanButton;
@@ -69,15 +72,16 @@ public class ScanActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.scanner);
 
+        res = getResources();
 
         Intent intent = new Intent(ScanActivity.this,BluetoothLeService.class);
-
-
         getApplicationContext().bindService(intent,conn,Context.BIND_AUTO_CREATE);
 
-
-
         handler = new Handler();
+
+
+
+
 
         deviceList = new ArrayList<String>();
         adpater = new ArrayAdapter<String>(this, R.layout.layout ,R.id.textview, deviceList);
@@ -92,9 +96,9 @@ public class ScanActivity extends AppCompatActivity {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Log.d("click_device",deviceList.get(position));
 
+
                 BluetoothDevice device = bluetoothAdapter.getRemoteDevice(deviceList.get(position));
-                bleService.getDevice(device);
-                bleService.connect();
+                bleService.setDevice(device);
 
                 if(bleService.getConnectState()){
                     Intent intent = new Intent(ScanActivity.this,ServiceActivity.class);
@@ -103,9 +107,6 @@ public class ScanActivity extends AppCompatActivity {
                 else{
                     //Toast.makeText(this,R.string.gatt_server_not_supporting,Toast.LENGTH_SHORT).show();
                 }
-
-
-
 
 
             }

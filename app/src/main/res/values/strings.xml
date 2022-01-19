@@ -1,22 +1,18 @@
 <resources>
     <string name="app_name">EcgBLEClassification</string>
 
+
+    <!--for Toast message-->
+    <string name="bluetooth_off">Please bluetooth ON</string>
+
     <string name="bluetooth_not_supporting">Not allowed BLUETOOTH.</string>
     <string name="ble_not_supporting">Not allowed BLE.</string>
     <string name="gatt_server_not_supporting">gatt server error</string>
 
     <string name="gatt_server_not_connecting">gatt_server_not_connecting</string>
 
-    <string name="bluetooth_off">Please bluetooth ON</string>
-    <string name="title_activity_main">MainActivity</string>
-    <!-- Strings used for fragments for navigation -->
-    <string name="first_fragment_label">First Fragment</string>
-    <string name="second_fragment_label">Second Fragment</string>
-    <string name="next">Next</string>
-    <string name="previous">Previous</string>
 
-    <string name="hello_first_fragment">Hello first fragment</string>
-    <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
+    <string name="mac_address_empty">Please set Mac Address</string>
 
 
 

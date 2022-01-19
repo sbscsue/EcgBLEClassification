@@ -16,11 +16,13 @@ import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -28,19 +30,30 @@ import androidx.core.app.NotificationManagerCompat;
 import java.util.UUID;
 
 public class BluetoothLeService extends Service {
+    //values
     final String SERVICE_TAG = "BLE_SERVICE_CHECK";
     final String GATT_TAG = "GATT_CHECK";
 
-    boolean gattConnectionState = false;
-
-
-    Resources res;
-    NotificationManagerCompat notiManager;
-
-    BluetoothManager manager;
-    BluetoothAdapter adapter;
+    private boolean gattConnectionState = false;
+    private String mac_address;
     BluetoothDevice device;
+
+    //default
+    private Resources res;
+
+    private NotificationManagerCompat notiManager;
+
+    private SharedPreferences preferences;
+    private SharedPreferences.Editor editor;
+
+
+    //ble
+    BluetoothManager manager;
+    BluetoothAdapter bluetoothAdapter;
     BluetoothGatt bluetoothGatt;
+
+    //service
+    Intent intent;
 
 
 
@@ -69,14 +82,31 @@ public class BluetoothLeService extends Service {
         super.onCreate();
         Log.i(SERVICE_TAG,"CREATE SERVICE");
 
-        Intent intent = new Intent(getApplicationContext(),EcgProcess.class);
-        startService(intent);
-
+        //DEFALT
         res = getResources();
-        //계속 켜지게
-        //startForegroundService();
 
+        preferences = getSharedPreferences(getString(R.string.S_NAME),Context.MODE_PRIVATE);
+        editor = preferences.edit();
 
+        manager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        bluetoothAdapter = manager.getAdapter();
+
+        //SERVICE
+        intent = new Intent(getApplicationContext(),EcgProcess.class);
+
+            //계속 켜지게
+            //startForegroundService();
+
+        //BLE
+        getDevice();
+        if(mac_address!=null){
+            Log.i(SERVICE_TAG,"FISRT BLE CONNECT - SUCESS");
+            connect();
+        }
+        else{
+            Log.i(SERVICE_TAG,"FIRST BLE CONNECT - FAIL ");
+            Toast.makeText(this, R.string.mac_address_empty, Toast.LENGTH_SHORT).show();
+        }
 
     }
 
@@ -85,19 +115,35 @@ public class BluetoothLeService extends Service {
     public void onDestroy() {
         super.onDestroy();
         Log.i(SERVICE_TAG,"DESTROY SERVICE");
-        if(gattConnectionState){
-            bluetoothGatt.disconnect();
-        }
+        disconnect();
 
     }
 
     //bluetooth
-    @SuppressLint("MissingPermission")
-    public void getDevice(BluetoothDevice device){
+    public void getDevice(){
         Log.i(SERVICE_TAG,"GET BLE DEVICE");
-        this.device = device;
 
-        Log.i(SERVICE_TAG,device.getName());
+        String check = null;
+        mac_address = preferences.getString(res.getString(R.string.S_BLUETOOTH),check);
+        device = bluetoothAdapter.getRemoteDevice(mac_address);
+
+        Log.i(SERVICE_TAG,mac_address);
+    }
+
+    @SuppressLint("MissingPermission")
+    public void setDevice(BluetoothDevice device){
+        Log.i(SERVICE_TAG,"SET BLE DEVICE");
+
+        editor.putString(res.getString(R.string.S_BLUETOOTH),device.getAddress());
+        editor.commit();
+
+        disconnect();
+        getDevice();
+        connect();
+    }
+
+    public boolean getConnectState(){
+        return gattConnectionState;
     }
 
     @SuppressLint("MissingPermission")
@@ -106,8 +152,8 @@ public class BluetoothLeService extends Service {
         if(gattConnectionState==false){
             bluetoothGatt = device.connectGatt(this,true,gattCallback);
             if(bluetoothGatt.connect()==true){
+                Log.i(SERVICE_TAG,"TRUE");
                 gattConnectionState = true;
-
             }
             else{
                 gattConnectionState = false;
@@ -119,14 +165,15 @@ public class BluetoothLeService extends Service {
     public void disconnect(){
         Log.i(SERVICE_TAG,"DISCONNECT GATT SERVER");
         if(gattConnectionState){
+            Log.i(SERVICE_TAG,"TRUE");
             bluetoothGatt.disconnect();
+            bluetoothGatt.close();
+            gattConnectionState = false;
+            stopService(intent);
         }
 
     }
 
-    public boolean getConnectState(){
-        return gattConnectionState;
-    }
 
 
 
@@ -164,6 +211,7 @@ public class BluetoothLeService extends Service {
                     if (charac != null){
                         //notifi
                         gatt.setCharacteristicNotification(charac,true);
+                        startService(intent);
                         //descripter
                         for(BluetoothGattDescriptor des : charac.getDescriptors()){
                             Log.i(GATT_TAG,"SET DESCRIPTOR");
@@ -185,7 +233,6 @@ public class BluetoothLeService extends Service {
 
             byte[] data = characteristic.getValue();
             send_ble_data(data);
-
         }
 
 

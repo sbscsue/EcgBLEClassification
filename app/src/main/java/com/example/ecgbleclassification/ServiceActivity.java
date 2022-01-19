@@ -59,6 +59,7 @@ import java.util.UUID;
 public class ServiceActivity extends AppCompatActivity {
 
     Resources res;
+
     int DATA_LENGTH;
     int SAMPLING_LATE;
     float PERIOD;
@@ -69,29 +70,12 @@ public class ServiceActivity extends AppCompatActivity {
 
     final String GATT_TAG = "GATT";
 
-
     BluetoothManager manager;
     BluetoothAdapter adapter;
     BLEReceiver receiver;
 
 
-    private BluetoothLeService bleService;
 
-    ServiceConnection conn = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            BluetoothLeService.BleBinder mb = (BluetoothLeService.BleBinder) service;
-            bleService = mb.getService();
-
-            Log.i("SERVICE_CHECK","CONNECT SERVICES");
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            Log.i("SERVICE_CHECK","DISCONNECT SERVICES");
-        }
-
-    };
 
 
     int flag = 0;
@@ -100,11 +84,7 @@ public class ServiceActivity extends AppCompatActivity {
     List<ILineDataSet> chart_set = new ArrayList<ILineDataSet>();
     LineData chart_data;
 
-    double cnt;
-    String time;
-    private FirebaseAuth mAuth;
-    private FirebaseDatabase mdb;
-    DatabaseReference parent;
+
 
 
     int count = 0;
@@ -138,24 +118,6 @@ public class ServiceActivity extends AppCompatActivity {
         };
         registerReceiver(receiver,theFilter);
 
-        FirebaseApp.initializeApp(this);
-        mAuth = FirebaseAuth.getInstance();
-        mAuth.signInAnonymously().addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
-            @Override
-            public void onComplete(@NonNull Task<AuthResult> task) {
-                if(task.isSuccessful()){
-                    Log.i("check_user","login");
-
-                    mdb = FirebaseDatabase.getInstance();
-                    time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-                    parent = mdb.getReference(time);
-                    parent.child("segment").setValue(DATA_LENGTH);
-                    parent.child("Fs").setValue(SAMPLING_LATE);
-                    parent.child("T").setValue(PERIOD);
-                    cnt = -1.0;
-                }
-            }
-        });
 
         //Log.i("check_user",mAuth.getCurrentUser().toString());
         //Log.i("check_user", String.valueOf(mAuth.getCurrentUser().isAnonymous()));
@@ -235,21 +197,6 @@ public class ServiceActivity extends AppCompatActivity {
         chart.invalidate();
 
 
-    }
-    public void saveFirebase(byte[] data){
-        cnt += 1.0;
-
-        StringBuilder builder = new StringBuilder();
-        for(int i=0; i<DATA_LENGTH; i++){
-            builder.append(data[i]);
-            builder.append(",");
-        }
-
-
-        Log.i("check_n", String.valueOf((int)cnt));
-        Log.i("check_firebase", builder.toString());
-
-        parent.child("data").child(String.valueOf((int)cnt)).setValue(builder.toString());
     }
 
 
