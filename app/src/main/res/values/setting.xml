@@ -1,0 +1,16 @@
+<resources>
+
+    <!--BLE service/charateristic-->
+
+    <!--BLE DATA RECEIVE SETTING-->
+    <integer name="segment_data_length">250</integer>
+
+    <integer name="sampling_rate">1000</integer>
+    <string name="period">0.0001</string>
+
+    <!--PLOT LENGTH-->
+    <integer name="all_plot_length">20000</integer>
+
+
+
+</resources>

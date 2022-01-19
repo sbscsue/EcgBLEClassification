@@ -1,6 +1,7 @@
 package com.example.ecgbleclassification;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -8,11 +9,14 @@ import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -29,6 +33,28 @@ public class MainActivity extends AppCompatActivity {
     BluetoothManager manager;
     BluetoothAdapter bluetoothAdapter;
 
+    Handler handler;
+    private static final long SCAN_PERIOD = 10000;
+    boolean mScanning;
+
+
+    private BluetoothLeService bleService;
+    ServiceConnection conn = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            BluetoothLeService.BleBinder mb = (BluetoothLeService.BleBinder) service;
+            //oncreate 실행
+            bleService = mb.getService();
+            Log.i("check_service",bleService.toString());
+            Log.i("SERVICE_CHECK","CONNECT SERVICES");
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            Log.i("SERVICE_CHECK","DISCONNECT SERVICES");
+        }
+    };
+
 
     Button scanButton;
     ListView ScanListView;
@@ -37,14 +63,27 @@ public class MainActivity extends AppCompatActivity {
     ArrayAdapter<String> adpater;
 
 
-    Handler handler;
-    private static final long SCAN_PERIOD = 10000;
-    boolean mScanning;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.scanner);
+
+        NotificationCompat.Builder builder1 = new NotificationCompat.Builder(this)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle("ECG MONITORING DEVICE")
+                .setContentText("BLE NOT CONNECT")
+                .setPriority(NotificationCompat.PRIORITY_MAX);
+
+
+        Intent intent = new Intent(MainActivity.this,BluetoothLeService.class);
+
+
+        getApplicationContext().bindService(intent,conn,Context.BIND_AUTO_CREATE);
+
+
+
 
         handler = new Handler();
 
@@ -60,9 +99,15 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Log.d("click_device",deviceList.get(position));
-                Intent intent = new Intent(getApplicationContext(),ServiceActivity.class);
-                intent.putExtra("address",deviceList.get(position));
+
+                BluetoothDevice device = bluetoothAdapter.getRemoteDevice(deviceList.get(position));
+                bleService.getDevice(device);
+                bleService.connect();
+
+                Intent intent = new Intent(MainActivity.this,ServiceActivity.class);
                 startActivity(intent);
+
+
 
             }
         });

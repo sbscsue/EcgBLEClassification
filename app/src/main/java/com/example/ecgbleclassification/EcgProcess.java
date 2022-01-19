@@ -3,6 +3,7 @@ package com.example.ecgbleclassification;
 import android.app.Service;
 import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
+import android.os.Binder;
 import android.os.IBinder;
 
 import androidx.annotation.Nullable;
@@ -17,15 +18,29 @@ import java.nio.channels.FileChannel;
 public class EcgProcess extends Service {
     private Interpreter interpreter;
 
-    @Nullable
+
+
+    IBinder serviceBinder = new ecgBinder();
+
+    class ecgBinder extends Binder {
+       EcgProcess getService() {
+            return EcgProcess.this;
+        }
+    }
+
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        return serviceBinder;
     }
 
 
+    private void setMode(){
 
+    }
 
+    private void save(){
+
+    }
 
     public String predict(){
         String output = "";
@@ -33,13 +48,14 @@ public class EcgProcess extends Service {
         return output;
     }
 
-    private void save(){
 
-    }
 
     private void peakDetection(){
 
     }
+
+
+
 
 
 
