@@ -91,12 +91,10 @@ public class BluetoothLeService extends Service {
         manager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = manager.getAdapter();
 
-        //SERVICE
-        intent = new Intent(getApplicationContext(),EcgProcess.class);
-        startService(intent);
 
-            //계속 켜지게
-            //startForegroundService();
+
+        //계속 켜지게
+        //startForegroundService(intent);
 
         //BLE
         getDevice();
@@ -172,7 +170,7 @@ public class BluetoothLeService extends Service {
             bluetoothGatt.disconnect();
             bluetoothGatt.close();
             gattConnectionState = false;
-            stopService(intent);
+            //stopService(intent);
         }
 
     }

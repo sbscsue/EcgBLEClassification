@@ -2,10 +2,13 @@ package com.example.ecgbleclassification;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
 import android.content.ComponentName;
@@ -54,6 +57,10 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(MainActivity.this,BluetoothLeService.class);
         startService(intent);
         //getApplicationContext().bindService(intent,conn, Context.BIND_AUTO_CREATE);
+
+        //SERVICE
+        intent = new Intent(getApplicationContext(),EcgProcess.class);
+        startService(intent);
 
         FragmentManager fragmentManager = getSupportFragmentManager();
         Fragment frag1 = new FragmentMain();

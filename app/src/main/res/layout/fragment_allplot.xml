@@ -5,17 +5,18 @@
     android:layout_height="match_parent"
     tools:context=".FragmentAllplot">
 
-    <TextView
-        android:id ="@+id/example"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="20dp"
-        />
-
     <com.github.mikephil.charting.charts.LineChart
         android:id="@+id/chartAll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@+id/LineChart" />
+
+
+    <TextView
+        android:id ="@+id/bpmAll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="20dp"
+        />
 
 </FrameLayout>

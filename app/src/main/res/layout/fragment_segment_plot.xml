@@ -5,16 +5,24 @@
     android:layout_height="match_parent"
     tools:context=".FragmentSegmentPlot">
 
-    <TextView
-        android:id ="@+id/segmentIndex"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="20dp"
-        />
+
 
     <com.github.mikephil.charting.charts.LineChart
         android:id="@+id/chartSegment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@+id/LineChart" />
+
+    <TextView
+        android:id ="@+id/segmentIndex"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="20dp"
+        />
+    <TextView
+        android:id ="@+id/bpmSeg"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="20dp"
+        />
 </FrameLayout>

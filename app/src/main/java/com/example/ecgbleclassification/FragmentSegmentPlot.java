@@ -13,10 +13,13 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.charts.PieRadarChartBase;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
+import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 
 import java.util.ArrayList;
@@ -26,13 +29,20 @@ import java.util.List;
 public class FragmentSegmentPlot extends Fragment {
     Resources res;
 
-    //plot
-    int SEGMENT_LENGTH;
+    //for debug
+    int debug_cnt;
+    TextView cntView;
 
-    private LineChart chart;
-    ArrayList<Entry> chart_entry = new ArrayList<Entry>();
-    List<ILineDataSet> chart_set = new ArrayList<ILineDataSet>();
-    LineData chart_data;
+    //BPM
+    TextView bpmView;
+
+
+    //plot
+    int SAMPLING_LATE;
+    float PERIOD;
+
+    int SEGMENT_LENGTH;
+    LineChart chart;
 
 
     //receiver
@@ -51,20 +61,29 @@ public class FragmentSegmentPlot extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        debug_cnt = 0;
+
         res = getResources();
 
         SEGMENT_LENGTH = res.getInteger(R.integer.segment_length);
 
         theFilter = new IntentFilter();
-        theFilter.addAction("SEGMENT_PLOT");
+        theFilter.addAction("segmentation");
+        theFilter.addAction("INFORMATION");
 
         receiver = new Receiver(){
             @Override
             public void onReceive(Context context, Intent intent) {
                 super.onReceive(context, intent);
-                if(intent.getAction().equals("SEGMENT_PLOT")){
+                if(intent.getAction().equals("segmentation")){
+                    Log.i(BROADCAST_TAG,"segmentation finish");
+                    debug_cnt +=1;
+                    cntView.setText(String.valueOf(debug_cnt));
+                    plot(intent.getIntArrayExtra("data"));
+                }
+                if(intent.getAction().equals("INFORMATION")){
                     Log.i(BROADCAST_TAG,intent.getAction());
-                    //plot(intent.getByteArrayExtra("BLE_DATA"));
+                    bpmView.setText(String.valueOf(intent.getIntExtra("BPM",0)));
                 }
             }
         };
@@ -77,6 +96,12 @@ public class FragmentSegmentPlot extends Fragment {
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_segment_plot, container, false);
 
+        debug_cnt = 0;
+        cntView = view.findViewById(R.id.segmentIndex);
+        cntView.setText(String.valueOf(debug_cnt));
+
+        bpmView = view.findViewById(R.id.bpmSeg);
+
         chart = view.findViewById(R.id.chartSegment);
         chart.setBackgroundColor(Color.WHITE);
         chart.getDescription().setEnabled(false);
@@ -85,5 +110,29 @@ public class FragmentSegmentPlot extends Fragment {
         requireActivity().registerReceiver(receiver,theFilter);
 
         return view;
+    }
+
+    private void plot(int[] data){
+        ArrayList<Entry> chart_entry = new ArrayList<Entry>();
+        LineDataSet data_set;
+
+        List<ILineDataSet> chart_set = new ArrayList<ILineDataSet>();
+        LineData chart_data;
+
+
+        for(int i =0;i < data.length; i++){
+            Entry e = new Entry();
+            e.setX(i);
+            e.setY(data[i]);
+            chart_entry.add(e);
+        }
+        Log.i("whywhy",String.valueOf(chart_entry.size()));
+        data_set = new LineDataSet(chart_entry, "ECG");
+        chart_set.add(data_set);
+        chart_data = new LineData(chart_set);
+
+        chart.setData(chart_data);
+        chart.invalidate();
+
     }
 }
