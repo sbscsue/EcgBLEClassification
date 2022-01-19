@@ -21,10 +21,13 @@ import java.nio.channels.FileChannel;
 public class EcgProcess extends Service {
     final String SERVICE_TAG = "ECG_SERVICE_CHECK";
 
-    private Interpreter interpreter;
-
+    boolean saveFlag = false;
+    boolean predictFlag = false;
 
     BLEReceiver receiver;
+
+    private Interpreter interpreter;
+
 
 
     IBinder serviceBinder = new EcgBinder();
@@ -63,11 +66,20 @@ public class EcgProcess extends Service {
         super.onDestroy();
     }
 
-    private void setMode(){
+
+
+    private void setSave(){
+
+    }
+    private void save(){
 
     }
 
-    private void save(){
+
+    private void setPredict(){
+
+    }
+    private void peakDetection(){
 
     }
 
@@ -79,9 +91,7 @@ public class EcgProcess extends Service {
 
 
 
-    private void peakDetection(){
 
-    }
 
 
 

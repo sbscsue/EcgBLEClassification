@@ -1,11 +1,8 @@
 package com.example.ecgbleclassification;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.NotificationCompat;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
-import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
@@ -28,7 +25,7 @@ import java.util.ArrayList;
 
 
 
-public class MainActivity extends AppCompatActivity {
+public class ScanActivity extends AppCompatActivity {
 
     BluetoothManager manager;
     BluetoothAdapter bluetoothAdapter;
@@ -73,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.scanner);
 
 
-        Intent intent = new Intent(MainActivity.this,BluetoothLeService.class);
+        Intent intent = new Intent(ScanActivity.this,BluetoothLeService.class);
 
 
         getApplicationContext().bindService(intent,conn,Context.BIND_AUTO_CREATE);
@@ -100,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
                 bleService.connect();
 
                 if(bleService.getConnectState()){
-                    Intent intent = new Intent(MainActivity.this,ServiceActivity.class);
+                    Intent intent = new Intent(ScanActivity.this,ServiceActivity.class);
                     startActivity(intent);
                 }
                 else{

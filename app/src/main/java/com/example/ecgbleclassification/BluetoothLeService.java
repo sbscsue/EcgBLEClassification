@@ -1,7 +1,6 @@
 package com.example.ecgbleclassification;
 
 import android.annotation.SuppressLint;
-import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -15,18 +14,14 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.res.Resources;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
-import android.widget.RemoteViews;
 
-import androidx.core.app.NotificationChannelCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
@@ -156,41 +151,31 @@ public class BluetoothLeService extends Service {
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             super.onServicesDiscovered(gatt, status);
-            Log.i(GATT_TAG,"SERVICES IS DISCOVERED");
+            Log.i(GATT_TAG, "SERVICES IS DISCOVERED");
 
+            String[] s_uuid = res.getStringArray(R.array.S_UUID);
+            String[] c_uuid = res.getStringArray(R.array.C_UUID);
 
-            for (BluetoothGattService service : gatt.getServices()) {
-                Log.i(GATT_TAG,service.getUuid().toString());
-                if(service.getUuid().toString().equals("00001523-1212-efde-1523-785feabcd123")){
-                    Log.i(GATT_TAG,"SERVICE GET");
-                    for (BluetoothGattCharacteristic characteristic : service.getCharacteristics()) {
-                        Log.i(GATT_TAG,characteristic.getUuid().toString());
-                        if(characteristic.getUuid().toString().equals("00001524-1212-efde-1523-785feabcd123")){
-                            Log.i(GATT_TAG,"CHARATERISTIC GET");
-                            gatt.setCharacteristicNotification(characteristic,true);
-
-                            for (BluetoothGattDescriptor descriptor : characteristic.getDescriptors()) {
-                                Log.i("??",descriptor.getUuid().toString());
-                            }
-
-                            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"));
-                            descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                            gatt.writeDescriptor(descriptor);
-
-
-
-
+            for(int i =0; i<s_uuid.length; i++){
+                Log.i(GATT_TAG,s_uuid[i]);
+                BluetoothGattService service = bluetoothGatt.getService(UUID.fromString(s_uuid[i]));
+                if (service != null){
+                    BluetoothGattCharacteristic charac = service.getCharacteristic(UUID.fromString(c_uuid[i]));
+                    if (charac != null){
+                        //notifi
+                        gatt.setCharacteristicNotification(charac,true);
+                        //descripter
+                        for(BluetoothGattDescriptor des : charac.getDescriptors()){
+                            Log.i(GATT_TAG,"SET DESCRIPTOR");
+                            des.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                            gatt.writeDescriptor(des);
                             break;
                         }
+
+
                     }
                 }
             }
-        }
-
-        @Override
-        public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-            super.onDescriptorWrite(gatt, descriptor, status);
-            Log.i(GATT_TAG,"Notify available");
         }
 
         @Override
@@ -203,12 +188,18 @@ public class BluetoothLeService extends Service {
 
         }
 
+
+        @Override
+        public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+            super.onDescriptorWrite(gatt, descriptor, status);
+            Log.i(GATT_TAG,"NOTIFY SET");
+        }
+
+
         @Override
         public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             super.onCharacteristicRead(gatt, characteristic, status);
             Log.i(GATT_TAG,"GATT DATA READ");
-
-
         }
 
     };
@@ -242,7 +233,7 @@ public class BluetoothLeService extends Service {
 
     //종료 안됨!
     void startForegroundService() {
-        Intent notificationIntent = new Intent(this, MainActivity.class);
+        Intent notificationIntent = new Intent(this, ScanActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
 
 
