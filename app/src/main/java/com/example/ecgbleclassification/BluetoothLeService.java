@@ -15,8 +15,11 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
+import android.content.res.Resources;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
@@ -33,8 +36,11 @@ public class BluetoothLeService extends Service {
     final String SERVICE_TAG = "BLE_SERVICE_CHECK";
     final String GATT_TAG = "GATT_CHECK";
 
-
     boolean gattConnectionState = false;
+
+
+    Resources res;
+    NotificationManagerCompat notiManager;
 
     BluetoothManager manager;
     BluetoothAdapter adapter;
@@ -42,8 +48,10 @@ public class BluetoothLeService extends Service {
     BluetoothGatt bluetoothGatt;
 
 
-    NotificationManagerCompat notiManager;
-    
+
+
+
+
     public BluetoothLeService() {
 
     }
@@ -66,12 +74,16 @@ public class BluetoothLeService extends Service {
         super.onCreate();
         Log.i(SERVICE_TAG,"CREATE SERVICE");
 
+        Intent intent = new Intent(getApplicationContext(),EcgProcess.class);
+        startService(intent);
+
+        res = getResources();
         //계속 켜지게
         //startForegroundService();
 
+
+
     }
-
-
 
     @SuppressLint("MissingPermission")
     @Override
@@ -115,6 +127,10 @@ public class BluetoothLeService extends Service {
             bluetoothGatt.disconnect();
         }
 
+    }
+
+    public boolean getConnectState(){
+        return gattConnectionState;
     }
 
 
@@ -199,15 +215,15 @@ public class BluetoothLeService extends Service {
 
 
     private void send_ble_data(byte[] data){
-        Intent intent = new Intent("toGraph");
-        intent.putExtra("BLE_DATA",data);
-        sendBroadcast(intent);
+        Intent intent1 = new Intent("toGraph");
+        intent1.putExtra("BLE_DATA",data);
+        sendBroadcast(intent1);
 
-        /*
-        Intent intent = new Intent("toService");
-        intent.putExtra("BLE_DATA",data);
-        sendBroadcast(intent);
-         */
+
+        Intent intent2 = new Intent("toService");
+        intent2.putExtra("BLE_DATA",data);
+        sendBroadcast(intent2);
+
 
 
     }

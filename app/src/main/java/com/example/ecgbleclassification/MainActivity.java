@@ -56,6 +56,8 @@ public class MainActivity extends AppCompatActivity {
     };
 
 
+
+
     Button scanButton;
     ListView ScanListView;
 
@@ -70,18 +72,11 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.scanner);
 
-        NotificationCompat.Builder builder1 = new NotificationCompat.Builder(this)
-                .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle("ECG MONITORING DEVICE")
-                .setContentText("BLE NOT CONNECT")
-                .setPriority(NotificationCompat.PRIORITY_MAX);
-
 
         Intent intent = new Intent(MainActivity.this,BluetoothLeService.class);
 
 
         getApplicationContext().bindService(intent,conn,Context.BIND_AUTO_CREATE);
-
 
 
 
@@ -93,7 +88,7 @@ public class MainActivity extends AppCompatActivity {
         manager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = manager.getAdapter();
 
-        ScanListView = findViewById(R.id.ScanList);
+        ScanListView = findViewById(R.id.ScansList);
         ScanListView.setAdapter(adpater);
         ScanListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -104,8 +99,15 @@ public class MainActivity extends AppCompatActivity {
                 bleService.getDevice(device);
                 bleService.connect();
 
-                Intent intent = new Intent(MainActivity.this,ServiceActivity.class);
-                startActivity(intent);
+                if(bleService.getConnectState()){
+                    Intent intent = new Intent(MainActivity.this,ServiceActivity.class);
+                    startActivity(intent);
+                }
+                else{
+                    //Toast.makeText(this,R.string.gatt_server_not_supporting,Toast.LENGTH_SHORT).show();
+                }
+
+
 
 
 
