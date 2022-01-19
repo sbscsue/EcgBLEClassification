@@ -35,6 +35,7 @@ public class FragmentSegmentPlot extends Fragment {
 
     //BPM
     TextView bpmView;
+    TextView predictView;
 
 
     //plot
@@ -84,6 +85,7 @@ public class FragmentSegmentPlot extends Fragment {
                 if(intent.getAction().equals("INFORMATION")){
                     Log.i(BROADCAST_TAG,intent.getAction());
                     bpmView.setText(String.valueOf(intent.getIntExtra("BPM",0)));
+                    predictView.setText(String.valueOf((intent.getStringExtra("PREDICT"))));
                 }
             }
         };
@@ -101,6 +103,9 @@ public class FragmentSegmentPlot extends Fragment {
         cntView.setText(String.valueOf(debug_cnt));
 
         bpmView = view.findViewById(R.id.bpmSeg);
+        predictView = view.findViewById(R.id.predictSeg);
+
+
 
         chart = view.findViewById(R.id.chartSegment);
         chart.setBackgroundColor(Color.WHITE);

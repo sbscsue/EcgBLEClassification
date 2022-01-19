@@ -52,6 +52,7 @@ public class FragmentAllplot extends Fragment {
     LineData chart_data;
 
     TextView bpmView;
+    TextView predictView;
 
     Receiver receiver;
     IntentFilter theFilter;
@@ -95,6 +96,7 @@ public class FragmentAllplot extends Fragment {
                 if(intent.getAction().equals("INFORMATION")){
                     Log.i(BROADCAST_TAG,intent.getAction());
                     bpmView.setText(String.valueOf(intent.getIntExtra("BPM",0)));
+                    predictView.setText(String.valueOf((intent.getStringExtra("PREDICT"))));
                 }
             }
         };
@@ -134,6 +136,7 @@ public class FragmentAllplot extends Fragment {
         chart.invalidate();
 
         bpmView = view.findViewById(R.id.bpmAll);
+        predictView = view.findViewById(R.id.predictAll);
 
         requireActivity().registerReceiver(receiver,theFilter);
         Log.d("checkcheck","plot초기화 끝");

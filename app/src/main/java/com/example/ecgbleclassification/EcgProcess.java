@@ -1,7 +1,5 @@
 package com.example.ecgbleclassification;
 
-import android.app.ForegroundServiceStartNotAllowedException;
-import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
@@ -15,12 +13,9 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
-import android.view.Window;
 
 import androidx.annotation.NonNull;
-import androidx.core.app.NotificationCompat;
 
-import com.github.mikephil.charting.data.Entry;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.FirebaseApp;
@@ -34,11 +29,8 @@ import org.tensorflow.lite.Interpreter;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PipedReader;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.time.LocalDateTime;
@@ -53,7 +45,10 @@ public class EcgProcess extends Service {
 
     final String WINDOW_TAG = "WINDOW_CHECK";
     final String SEGMENTATION_TAG = "SEGMENT_CHECK";
+    final String TENSORFLOW_TAG = "TENSORFLOW_CHECK";
+
     final String FORDEBUG_TAG = "FORDEBUG_TAG";
+
 
 
     int DATA_LENGTH;
@@ -62,6 +57,12 @@ public class EcgProcess extends Service {
 
     int WINDOW_LENGTH ;
     int SEGMENT_LENGTH;
+
+
+    int INPUT_LENGTH;
+    int OUTPUT_LENGTH;
+    String[] ANN;
+
 
  
 
@@ -99,9 +100,6 @@ public class EcgProcess extends Service {
     int prevRpeak;
     //REAL VALUE MARKER
     int window_cnt;
-
-
-
 
 
 
@@ -147,6 +145,10 @@ public class EcgProcess extends Service {
         WINDOW_LENGTH = res.getInteger(R.integer.window_length);
         SEGMENT_LENGTH = res.getInteger(R.integer.segment_length);
 
+        INPUT_LENGTH = res.getInteger(R.integer.modelInputShape);
+        OUTPUT_LENGTH = res.getInteger(R.integer.modelOutputShape);
+        ANN = res.getStringArray(R.array.AAMI_ANN);
+
         //ecg data
         originalEcg = new int[2][WINDOW_LENGTH];
         squareEcg = new int[2][WINDOW_LENGTH];
@@ -162,7 +164,9 @@ public class EcgProcess extends Service {
         prevRpeak = 0;
 
 
-
+        //tensorflow
+        interpreter = getTfliteInterpreter("model.tflite");
+        Log.i("tesnorflow",interpreter.toString());
 
 
 
@@ -462,8 +466,9 @@ public class EcgProcess extends Service {
                     //forDebug(index,segmentEcg);
 
                     int bpm = getBpm(index.get("peak_sample"));
+                    String predictAnn = predict(segmentEcg);
 
-                    segmentPlot(segmentEcg,bpm);
+                    segmentPlot(segmentEcg,bpm,predictAnn);
                     segmentIndexs.poll();
                 }
                 else{
@@ -496,7 +501,38 @@ public class EcgProcess extends Service {
     }
 
 
-    public void segmentPlot(int[] data,int bpm){
+
+
+    public String predict(int[] data){
+        int n =  data.length;
+
+        int[] d  =  Arrays.copyOfRange(data,n-144,n+144);
+
+        float[][][] input = new float[1][INPUT_LENGTH][1];
+        for(int i=0; i<d.length; i++){
+            input[0][i][0] = d[i];
+        }
+
+
+        float[][] output = new float[1][OUTPUT_LENGTH];
+        interpreter.run(input,output);
+
+        double value = 0;
+        int flag = 0;
+        for(int i=0; i< output.length; i++){
+            if(output[0][i]>=value){
+                flag = i;
+                value = output[0][i];
+            }
+        }
+
+        String result = ANN[flag];
+        Log.i(TENSORFLOW_TAG,String.valueOf(result));
+
+        return result;
+    }
+
+    public void segmentPlot(int[] data,int bpm,String predict){
         Intent intent = new Intent("segmentation");
         intent.putExtra("data",data);
         sendBroadcast(intent);
@@ -505,20 +541,13 @@ public class EcgProcess extends Service {
         intent = null;
         intent = new Intent("INFORMATION");
         intent.putExtra("BPM",bpm);
+        intent.putExtra("PREDICT",predict);
         //intent.putExtra("predict",predict);
         sendBroadcast(intent);
 
     }
 
-    public void toTensor(){
 
-    }
-
-    public String predict(){
-        String output = "";
-
-        return output;
-    }
 
     public void save(){
 
@@ -577,6 +606,41 @@ public class EcgProcess extends Service {
     }
 
 
+    private int otherwindowFlag(int original){
+        if(original==0){
+            return 1;
+        }
+        else{
+            return 0;
+        }
+
+    }
+
+
+    private MappedByteBuffer loadModelFile(String modelPath) throws IOException {
+        AssetFileDescriptor fileDescriptor = getAssets().openFd(modelPath);
+        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
+        FileChannel fileChannel = inputStream.getChannel();
+        long startOffset = fileDescriptor.getStartOffset();
+        long declaredLength = fileDescriptor.getDeclaredLength();
+        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
+    }
+
+
+    private Interpreter getTfliteInterpreter(String modelPath){
+        try {
+            return new Interpreter(loadModelFile(modelPath));
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
+
+
+
     public void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager manager = getBaseContext().getSystemService(NotificationManager.class);
@@ -612,26 +676,6 @@ public class EcgProcess extends Service {
 
      */
 
-
-
-    private MappedByteBuffer loadModelFile(String modelPath) throws IOException {
-        AssetFileDescriptor fileDescriptor = getAssets().openFd(modelPath);
-        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
-        FileChannel fileChannel = inputStream.getChannel();
-        long startOffset = fileDescriptor.getStartOffset();
-        long declaredLength = fileDescriptor.getDeclaredLength();
-        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
-    }
-
-    private int otherwindowFlag(int original){
-        if(original==0){
-            return 1;
-        }
-        else{
-            return 0;
-        }
-
-    }
 
 
 

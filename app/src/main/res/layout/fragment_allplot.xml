@@ -5,18 +5,44 @@
     android:layout_height="match_parent"
     tools:context=".FragmentAllplot">
 
+
+
+
     <com.github.mikephil.charting.charts.LineChart
         android:id="@+id/chartAll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@+id/LineChart" />
+        android:layout_above="@+id/LineChart" >
 
 
-    <TextView
-        android:id ="@+id/bpmAll"
+    </com.github.mikephil.charting.charts.LineChart>
+
+
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="20dp"
-        />
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+
+
+        <TextView
+            android:id ="@+id/bpmAll"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="20dp"
+            />
+
+        <TextView
+            android:id ="@+id/predictAll"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="20dp"
+            />
+
+    </LinearLayout>
+
+
+
+
 
 </FrameLayout>
