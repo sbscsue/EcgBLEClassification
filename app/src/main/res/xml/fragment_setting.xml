@@ -1,23 +1,27 @@
 <PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <PreferenceCategory app:title="Bluetooth">
+    <PreferenceCategory
+        app:key = "BluetoothCategory"
+        app:title="Bluetooth">
 
 
         <SwitchPreference
-            android:key=""
-            android:title=""
+            android:key="bluetooth"
+            android:title="Enable Bluetooth Service"
             />
 
     </PreferenceCategory>
 
 
-    <PreferenceCategory app:title="Service">
+    <PreferenceCategory
+        app:key="EcgCategory"
+        app:title="Ecg">
 
 
         <SwitchPreference
-            android:key=""
-            android:title=""
+            android:key="ecg"
+            android:title="Enable Ecg Service"
             />
 
     </PreferenceCategory>

@@ -161,13 +161,9 @@ public class FragmentAllplot extends Fragment {
         for(int i=0; i<DATA_LENGTH; i+=1){
             //Log.i("data", String.valueOf((float)(data[i] & 0xff)));
             Entry d = new Entry();
+
             d.setX(chart_entry.get(i+flag).getX());
-            if(i<244){
-                d.setY((float)(data[i] & 0xff));
-            }
-            else{
-                d.setY((float)(data[243] & 0xff));
-            }
+            d.setY((float)(data[i] & 0xff));
 
             chart_entry.set(i+flag,d);
         }

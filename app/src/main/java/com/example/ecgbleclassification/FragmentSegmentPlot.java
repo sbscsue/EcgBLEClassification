@@ -116,7 +116,17 @@ public class FragmentSegmentPlot extends Fragment {
 
         return view;
     }
+    @Override
+    public void onPause() {
+        super.onPause();
+        requireActivity().unregisterReceiver(receiver);
+    }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        requireActivity().registerReceiver(receiver,theFilter);
+    }
     private void plot(int[] data){
         ArrayList<Entry> chart_entry = new ArrayList<Entry>();
         LineDataSet data_set;

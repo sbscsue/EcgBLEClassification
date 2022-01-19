@@ -1,5 +1,6 @@
 package com.example.ecgbleclassification;
 
+import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
@@ -15,6 +16,7 @@ import android.os.IBinder;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.core.app.NotificationCompat;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -46,6 +48,7 @@ public class EcgProcess extends Service {
     final String WINDOW_TAG = "WINDOW_CHECK";
     final String SEGMENTATION_TAG = "SEGMENT_CHECK";
     final String TENSORFLOW_TAG = "TENSORFLOW_CHECK";
+    final String FUNCTION_TAG = "FUNCTION_CHECK";
 
     final String FORDEBUG_TAG = "FORDEBUG_TAG";
 
@@ -64,20 +67,16 @@ public class EcgProcess extends Service {
     String[] ANN;
 
 
- 
+
+    //other
+    Resources res;
 
     //Broadcast Receiver
     Receiver receiver;
+    NotificationManager notificationManager;
+    Notification notification;
 
 
-
-
-    //firebase
-    double cnt;
-    String time;
-    private FirebaseAuth mAuth;
-    private FirebaseDatabase mdb;
-    DatabaseReference parent;
 
 
     //ecg data(window)
@@ -107,9 +106,20 @@ public class EcgProcess extends Service {
     private Interpreter interpreter;
 
 
-    //other
-    Resources res;
 
+    //save
+    //firebase
+    double cnt;
+    String time;
+    private FirebaseAuth mAuth;
+    private FirebaseDatabase mdb;
+    DatabaseReference parent;
+
+    //local
+    LocalDateTime startTime;
+    LocalDateTime endTime;
+    File segmentIndexFile;
+    File windowFile;
 
     IBinder serviceBinder = new EcgBinder();
     class EcgBinder extends Binder {
@@ -126,17 +136,20 @@ public class EcgProcess extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.v(FUNCTION_TAG,"lifeCycle:onCreate()");
 
-        /*
-       createNotificationChannel();
-        Notification notification = new NotificationCompat.Builder(this, "EcgProcess")
-                .setContentTitle("Foreground Service")
-                .setContentText("ECGProcess")
-                .setSmallIcon(R.mipmap.ic_launcher)
-                .build();
+
+
+        createNotificationChannel();
+        notificationManager = getBaseContext().getSystemService(NotificationManager.class);
+        notification = new NotificationCompat.Builder(this, "EcgProcess")
+              .setContentTitle("EcgStatus")
+              .setContentText("--------")
+              .setSmallIcon(R.mipmap.ic_launcher).build();
 
         startForeground(1,notification);
-        */
+
+
         Log.i(SERVICE_TAG,"START SERVICE");
         res = getResources();
         DATA_LENGTH =  res.getInteger(R.integer.data_length);
@@ -147,7 +160,7 @@ public class EcgProcess extends Service {
 
         INPUT_LENGTH = res.getInteger(R.integer.modelInputShape);
         OUTPUT_LENGTH = res.getInteger(R.integer.modelOutputShape);
-        ANN = res.getStringArray(R.array.AAMI_ANN);
+        ANN = res.getStringArray(R.array.NSV_ANN);
 
         //ecg data
         originalEcg = new int[2][WINDOW_LENGTH];
@@ -164,9 +177,9 @@ public class EcgProcess extends Service {
         prevRpeak = 0;
 
 
+
         //tensorflow
-        interpreter = getTfliteInterpreter("model.tflite");
-        Log.i("tesnorflow",interpreter.toString());
+        interpreter = getTfliteInterpreter("model02.tflite");
 
 
 
@@ -182,22 +195,16 @@ public class EcgProcess extends Service {
                 if(intent.getAction().equals("BLE")){
                     //Log.i(BROADCAST_TAG,intent.getAction());
                     setWindow(intent.getByteArrayExtra("BLE_DATA"));
-                    switchWindow();
                     findPeak();
-
                     setSegment();
-
-
-
+                    switchWindow();
                 }
-                if(intent.getAction().equals("Peak")){
-                    Log.i(BROADCAST_TAG,intent.getAction());
-                    //segmentation -predict - save
-                }
-
             }
         };
         registerReceiver(receiver,theFilter);
+
+
+        startTime = LocalDateTime.now();
 
         //firebase
         FirebaseApp.initializeApp(this);
@@ -222,49 +229,88 @@ public class EcgProcess extends Service {
 
         });
 
+        initalizeLocalSave();
+
+
+
     }
+
+    private void initalizeLocalSave(){
+        StringBuilder pathBuilder = new StringBuilder();
+
+        String folderName = Environment.getExternalStorageDirectory().getAbsolutePath()+"/EcgData";
+        File folder = new File(folderName);
+        String timeName = startTime.format(DateTimeFormatter.ofPattern("yyyyMMddHHmm"));
+        folder = new File(folder,timeName);
+
+        segmentIndexFile = new File(folder+"/segment.txt");
+        windowFile = new File(folder+"/window");
+
+        windowFile.mkdirs();
+    }
+
 
     @Override
     public void onDestroy() {
-
         super.onDestroy();
+        Log.v(FUNCTION_TAG,"lifeCycle:onDesctroy()");
 
-        Log.i(SERVICE_TAG,"onDestory()");
         unregisterReceiver(receiver);
+
+        endTime = LocalDateTime.now();
+        try {
+            timestampLocalSave(endTime);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        stopForeground(true);
+    }
+
+    private void timestampLocalSave(LocalDateTime endTime) throws IOException {
+        Log.v(FUNCTION_TAG,"user:timestampLocalSave");
+        String folderName = Environment.getExternalStorageDirectory().getAbsolutePath()+"/EcgData";
+        File folder = new File(folderName);
+        String fileName = "timeStamp.txt";
+        File file = new File(folder,fileName);
+
+
+        BufferedWriter out =new BufferedWriter(new FileWriter(file,true));
+
+        StringBuilder record = new StringBuilder()
+                .append(startTime.format(DateTimeFormatter.ofPattern("yyyyMMddHHmm")))
+                .append(" ")
+                .append(endTime.format(DateTimeFormatter.ofPattern("yyyyMMddHHmm")))
+                .append("\n");
+
+        out.write(record.toString());
+        out.flush();
+        out.close();
     }
 
 
     public void setThresholdValue(){
+        Log.v(FUNCTION_TAG,"user:setThresholdValue()");
         int sum = 0;
         for(int i=0; i<WINDOW_LENGTH; i++){
             sum +=  squareEcg[0][i];
         }
 
         thresholdMode=1;
-        thresholdValue = (int) ((sum / WINDOW_LENGTH)*1.9);
+        thresholdValue = (int) ((sum / WINDOW_LENGTH)*1.45);
         Log.i(SEGMENTATION_TAG,"threshold_value:"+String.valueOf(thresholdValue));
 
         window_flag=0;
     }
 
     private void setWindow(byte[] data){
+        Log.v(FUNCTION_TAG,"user:setWindow()");
         int d;
         int dd;
 
 
         for(int i=0; i<DATA_LENGTH; i+=1){
-            if(i<244) {
-                d = data[i] & 0xff;
 
-            }
-            else{
-                d = data[243];
-            }
-
-            if(d < 0){
-                d = originalEcg[window_flag][next_flag+i-1] ;
-            }
-
+            d = data[i] & 0xff;
             dd = d*d;
             originalEcg[window_flag][next_flag+i] = d;
             squareEcg[window_flag][next_flag+i] = dd;
@@ -295,30 +341,11 @@ public class EcgProcess extends Service {
             next_flag += DATA_LENGTH;
     }
 
-    private void switchWindow(){
-        if(next_flag==WINDOW_LENGTH){
-            next_flag=0;
-            if(thresholdMode==-1){
-                setThresholdValue();
-            }
-            else{
-                Log.i(SEGMENTATION_TAG,"SWITH_UpCnt:"+String.valueOf(window_cnt));
-                Log.i(SEGMENTATION_TAG,"SWITH_Flag:"+String.valueOf(window_flag));
 
-                if(window_flag==0){
-                    window_flag = 1;
-                }
-                else if(window_flag==1){
-                    window_flag = 0;
-                }
-                window_cnt+=1;
-                Log.i(WINDOW_TAG,String.valueOf(window_flag));
-            }
-        }
-    }
 
 
     private void findPeak() {
+        Log.v(FUNCTION_TAG,"user:findPeak()");
         HashMap<String, Integer> peak_index;
         peak_index = new HashMap<>();
 
@@ -365,6 +392,7 @@ public class EcgProcess extends Service {
 
 
     private void setSegmentIndex(HashMap<String,Integer> peak_index){
+        Log.v(FUNCTION_TAG,"user:setSegmentIndex()");
         int p = peak_index.get("sample");
         int start = p - SEGMENT_LENGTH;
         int end = p  + SEGMENT_LENGTH;
@@ -441,14 +469,16 @@ public class EcgProcess extends Service {
     }
 
     private void setSegment()  {
+        Log.v(FUNCTION_TAG,"user:setSegment()");
        //Log.i(SEGMENTATION_TAG,String.valueOf(segmentIndexs.size()));
         while(!segmentIndexs.isEmpty()){
             //Log.i(SEGMENTATION_TAG,String.valueOf(segmentIndexs.isEmpty()));
             //Log.i(SEGMENTATION_TAG,"Queue:"+String.valueOf(segmentIndexs.size()));
             HashMap<String,Integer> index = segmentIndexs.peek();
             if(index.get("back_flag")==window_flag){
-                Log.i("indexd","f "+String.valueOf(index.get("back_end")));
-                Log.i("indexd","o "+String.valueOf(next_flag));
+                //Log.i("indexd","f "+String.valueOf(index.get("back_end")));
+                //Log.i("indexd","o "+String.valueOf(next_flag));
+                Log.i("indexd_length",String.valueOf(segmentIndexs.size()));
                 if(index.get("back_end")<next_flag){
                     Log.i("indexd","sliceslicslicslice");
 
@@ -468,7 +498,9 @@ public class EcgProcess extends Service {
                     int bpm = getBpm(index.get("peak_sample"));
                     String predictAnn = predict(segmentEcg);
 
-                    segmentPlot(segmentEcg,bpm,predictAnn);
+                    setSegmentPlot(segmentEcg,bpm,predictAnn);
+                    setNotification(bpm,predictAnn);
+                    saveLocalSegmentIndex(index,bpm,predictAnn);
                     segmentIndexs.poll();
                 }
                 else{
@@ -482,7 +514,10 @@ public class EcgProcess extends Service {
         }
     }
 
+
+
     public int getBpm(int currentRpeak){
+        Log.v(FUNCTION_TAG,"user:getBpm()");
         float RR_interval = 0;
 
         if(currentRpeak < prevRpeak){
@@ -504,13 +539,11 @@ public class EcgProcess extends Service {
 
 
     public String predict(int[] data){
-        int n =  data.length;
-
-        int[] d  =  Arrays.copyOfRange(data,n-144,n+144);
+        Log.v(FUNCTION_TAG,"user:predict()");
 
         float[][][] input = new float[1][INPUT_LENGTH][1];
-        for(int i=0; i<d.length; i++){
-            input[0][i][0] = d[i];
+        for(int i=0; i<data.length; i++){
+            input[0][i][0] = data[i];
         }
 
 
@@ -532,7 +565,15 @@ public class EcgProcess extends Service {
         return result;
     }
 
-    public void segmentPlot(int[] data,int bpm,String predict){
+    void setNotification(int BPM, String predict){
+        notificationManager.notify(1,new NotificationCompat.Builder(this, "EcgProcess")
+                .setContentTitle("EcgStatus")
+                .setContentText("BPM: "+BPM+"  "+ "ANN: " + predict )
+                .setSmallIcon(R.mipmap.ic_launcher).build());
+    }
+
+    public void setSegmentPlot(int[] data,int bpm,String predict){
+        Log.v(FUNCTION_TAG,"user:segmentPlot()");
         Intent intent = new Intent("segmentation");
         intent.putExtra("data",data);
         sendBroadcast(intent);
@@ -548,13 +589,96 @@ public class EcgProcess extends Service {
     }
 
 
+    public void saveLocalSegmentIndex(HashMap<String,Integer> index,int bpm, String predict){
+        Log.v(FUNCTION_TAG,"user:saveLocalSegmentIndex()");
+        File f = segmentIndexFile;
+        try {
+            int peak_cnt=-1;
+            int front_cnt=-1;
+            int back_cnt=-1;
 
-    public void save(){
+            if(index.get("peak_flag")!=window_flag){
+                peak_cnt = window_cnt-1;
+            }
+            else{
+                peak_cnt = window_cnt;
+            }
+            if(index.get("front_flag")!=window_flag){
+                front_cnt = window_cnt-1;
+            }
+            else{
+                front_cnt = window_cnt;
+            }
+            if(index.get("back_flag")!=window_flag){
+                back_cnt = window_cnt-1;
+            }
+            else{
+                back_cnt = window_cnt;
+            }
+
+            BufferedWriter out = new BufferedWriter(new FileWriter(f,true));
+            StringBuilder sb = new StringBuilder();
+            sb.append(peak_cnt).append(",").append(index.get("peak_sample")).append(",")
+                    .append(bpm).append(",").append(predict).append("\n");
+            sb.append(front_cnt).append(",").append(index.get("front_start")).append(",").append(index.get("front_end")).append("\n");
+            sb.append(back_cnt).append(",").append(index.get("back_start")).append(",").append(index.get("back_end")).append("\n");
+
+            out.write(sb.toString());
+            out.flush();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
     }
 
 
+
+    private void switchWindow(){
+        Log.v(FUNCTION_TAG,"user:switchWindow()");
+        if(next_flag==WINDOW_LENGTH){
+            next_flag=0;
+            if(thresholdMode==-1){
+                setThresholdValue();
+            }
+            else{
+                try {
+                    saveLocalWindow(window_flag,window_cnt);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                if(window_flag==0){
+                    window_flag = 1;
+                }
+                else if(window_flag==1){
+                    window_flag = 0;
+                }
+                window_cnt+=1;
+                Log.i(WINDOW_TAG,String.valueOf(window_flag));
+            }
+        }
+    }
+
+    public void saveLocalWindow(int flag, int cnt) throws IOException {
+        Log.v(FUNCTION_TAG,"user:saveLocalWindow()");
+        File f = new File(windowFile,String.valueOf(cnt)+".csv");
+        BufferedWriter out = new BufferedWriter(new FileWriter(f,true));
+
+        StringBuilder sb = new StringBuilder();
+        for (int s : originalEcg[flag]) {
+            sb.append(String.valueOf(s)).append(",");
+        }
+        out.write(sb.toString());
+        out.flush();
+    }
+
+
+
+
+
+
     public int[] getWindowCnt(int front, int end){
+        Log.v(FUNCTION_TAG,"user:getWindowCnt()");
         int [] cnt = new int[2];
         if(front==end){
             cnt[0] = window_cnt;
@@ -567,6 +691,61 @@ public class EcgProcess extends Service {
         Log.i(FORDEBUG_TAG,cnt.toString());
         return cnt;
     }
+
+
+
+
+
+    private int otherwindowFlag(int original){
+        if(original==0){
+            return 1;
+        }
+        else{
+            return 0;
+        }
+
+    }
+
+
+    public void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager manager = getBaseContext().getSystemService(NotificationManager.class);
+            if(manager.getNotificationChannel("EcgProcess")==null){
+                NotificationChannel serviceChannel = new NotificationChannel(
+                        "EcgProcess",
+                        "EcgProcess",
+                        NotificationManager.IMPORTANCE_NONE
+                );
+                manager.createNotificationChannel(serviceChannel);
+            }
+
+        }
+    }
+
+
+
+    private MappedByteBuffer loadModelFile(String modelPath) throws IOException {
+        AssetFileDescriptor fileDescriptor = getAssets().openFd(modelPath);
+        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
+        FileChannel fileChannel = inputStream.getChannel();
+        long startOffset = fileDescriptor.getStartOffset();
+        long declaredLength = fileDescriptor.getDeclaredLength();
+        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
+    }
+
+
+    private Interpreter getTfliteInterpreter(String modelPath){
+        try {
+            return new Interpreter(loadModelFile(modelPath));
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
+
 
 
 
@@ -604,58 +783,6 @@ public class EcgProcess extends Service {
         out.close();
 
     }
-
-
-    private int otherwindowFlag(int original){
-        if(original==0){
-            return 1;
-        }
-        else{
-            return 0;
-        }
-
-    }
-
-
-    private MappedByteBuffer loadModelFile(String modelPath) throws IOException {
-        AssetFileDescriptor fileDescriptor = getAssets().openFd(modelPath);
-        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
-        FileChannel fileChannel = inputStream.getChannel();
-        long startOffset = fileDescriptor.getStartOffset();
-        long declaredLength = fileDescriptor.getDeclaredLength();
-        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
-    }
-
-
-    private Interpreter getTfliteInterpreter(String modelPath){
-        try {
-            return new Interpreter(loadModelFile(modelPath));
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-
-
-
-
-    public void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationManager manager = getBaseContext().getSystemService(NotificationManager.class);
-            if(manager.getNotificationChannel("EcgProcess")==null){
-                NotificationChannel serviceChannel = new NotificationChannel(
-                        "EcgProcess",
-                        "EcgProcess",
-                        NotificationManager.IMPORTANCE_NONE
-                );
-                manager.createNotificationChannel(serviceChannel);
-            }
-
-        }
-    }
-
 
     /*
     public void saveFirebase(byte[] data){
