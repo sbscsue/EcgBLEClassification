@@ -493,14 +493,17 @@ public class EcgProcess extends Service {
                     System.arraycopy(frontEcg,0,segmentEcg,0,frontEcg.length);
                     System.arraycopy(backEcg,0,segmentEcg,frontEcg.length,backEcg.length);
 
+                    float[] minMaxSegmentEcg = minMaxScale(segmentEcg);
                     //forDebug(index,segmentEcg);
 
                     int bpm = getBpm(index.get("peak_sample"));
-                    String predictAnn = predict(segmentEcg);
+                    String predictAnn = predict(minMaxSegmentEcg);
 
-                    setSegmentPlot(segmentEcg,bpm,predictAnn);
+
                     setNotification(bpm,predictAnn);
+                    setSegmentPlot(minMaxSegmentEcg,bpm,predictAnn);
                     saveLocalSegmentIndex(index,bpm,predictAnn);
+
                     segmentIndexs.poll();
                 }
                 else{
@@ -514,6 +517,30 @@ public class EcgProcess extends Service {
         }
     }
 
+    private float[] minMaxScale(int[] data){
+        int minValue=256;
+        int maxValue=-1;
+
+        for(int i=0; i<data.length;i++){
+            int d = data[i];
+            if(d>maxValue){
+                maxValue =d;
+            }
+            if(d<minValue){
+                minValue = d;
+            }
+        }
+
+        float[] scaleData = new float[data.length];
+        int under =  maxValue-minValue;
+        for(int i=0; i<data.length; i++){
+            int up = data[i]-minValue;
+            scaleData[i] = up/under;
+        }
+
+
+        return scaleData;
+    }
 
 
     public int getBpm(int currentRpeak){
@@ -538,7 +565,7 @@ public class EcgProcess extends Service {
 
 
 
-    public String predict(int[] data){
+    public String predict(float[] data){
         Log.v(FUNCTION_TAG,"user:predict()");
 
         float[][][] input = new float[1][INPUT_LENGTH][1];
@@ -573,6 +600,28 @@ public class EcgProcess extends Service {
     }
 
     public void setSegmentPlot(int[] data,int bpm,String predict){
+        float[] reData = new float[data.length];
+        for (int i=0; i<data.length; i++) {
+            reData[i] = (float)data[i];
+        }
+
+        Log.v(FUNCTION_TAG,"user:segmentPlot()");
+        Intent intent = new Intent("segmentation");
+        intent.putExtra("data",reData);
+        sendBroadcast(intent);
+
+
+        intent = null;
+        intent = new Intent("INFORMATION");
+        intent.putExtra("BPM",bpm);
+        intent.putExtra("PREDICT",predict);
+        //intent.putExtra("predict",predict);
+        sendBroadcast(intent);
+
+    }
+
+
+    public void setSegmentPlot(float[] data,int bpm,String predict){
         Log.v(FUNCTION_TAG,"user:segmentPlot()");
         Intent intent = new Intent("segmentation");
         intent.putExtra("data",data);
@@ -587,6 +636,7 @@ public class EcgProcess extends Service {
         sendBroadcast(intent);
 
     }
+
 
 
     public void saveLocalSegmentIndex(HashMap<String,Integer> index,int bpm, String predict){

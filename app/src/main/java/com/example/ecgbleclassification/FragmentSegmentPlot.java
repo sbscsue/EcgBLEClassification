@@ -23,6 +23,7 @@ import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -80,7 +81,7 @@ public class FragmentSegmentPlot extends Fragment {
                     Log.i(BROADCAST_TAG,"segmentation finish");
                     debug_cnt +=1;
                     cntView.setText(String.valueOf(debug_cnt));
-                    plot(intent.getIntArrayExtra("data"));
+                    plot(intent.getFloatArrayExtra("data"));
                 }
                 if(intent.getAction().equals("INFORMATION")){
                     Log.i(BROADCAST_TAG,intent.getAction());
@@ -127,7 +128,7 @@ public class FragmentSegmentPlot extends Fragment {
         super.onResume();
         requireActivity().registerReceiver(receiver,theFilter);
     }
-    private void plot(int[] data){
+    private void plot(float[] data){
         ArrayList<Entry> chart_entry = new ArrayList<Entry>();
         LineDataSet data_set;
 
