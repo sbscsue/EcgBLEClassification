@@ -80,15 +80,15 @@ public class EcgProcess extends Service {
 
 
     //ecg data(window)
-    int[][] originalEcg;
-    int[][] squareEcg;
+    float[][] originalEcg;
+    float[][] squareEcg;
 
     int next_flag;
     int window_flag;
 
     //threshold
     int thresholdMode;
-    int thresholdValue;
+    float thresholdValue;
     HashMap<String, Integer> thresholdStart;
     HashMap<String, Integer> thresholdEnd;
 
@@ -163,8 +163,8 @@ public class EcgProcess extends Service {
         ANN = res.getStringArray(R.array.NSV_ANN);
 
         //ecg data
-        originalEcg = new int[2][WINDOW_LENGTH];
-        squareEcg = new int[2][WINDOW_LENGTH];
+        originalEcg = new float[2][WINDOW_LENGTH];
+        squareEcg = new float[2][WINDOW_LENGTH];
 
         window_cnt = 0;
         window_flag = 0;
@@ -194,7 +194,7 @@ public class EcgProcess extends Service {
                 super.onReceive(context, intent);
                 if(intent.getAction().equals("BLE")){
                     //Log.i(BROADCAST_TAG,intent.getAction());
-                    setWindow(intent.getByteArrayExtra("BLE_DATA"));
+                    setWindow(intent.getFloatArrayExtra("BLE_DATA"));
                     findPeak();
                     setSegment();
                     switchWindow();
@@ -296,7 +296,7 @@ public class EcgProcess extends Service {
         }
 
         thresholdMode=1;
-        thresholdValue = (int) ((sum / WINDOW_LENGTH)*1.45);
+        thresholdValue = (float) ((sum / WINDOW_LENGTH)*1.45);
         Log.i(SEGMENTATION_TAG,"threshold_value:"+String.valueOf(thresholdValue));
 
         window_flag=0;
@@ -341,6 +341,45 @@ public class EcgProcess extends Service {
             next_flag += DATA_LENGTH;
     }
 
+    private void setWindow(float[] data){
+        Log.v(FUNCTION_TAG,"user:setWindow()");
+        float d;
+        float dd;
+
+
+        for(int i=0; i<DATA_LENGTH; i+=1){
+
+            d = data[i];
+            dd = d*d;
+            originalEcg[window_flag][next_flag+i] = d;
+            squareEcg[window_flag][next_flag+i] = dd;
+
+
+            if(thresholdMode!=-1){
+                if(thresholdStart == null){
+                    if(dd>thresholdValue){
+                        Log.i(SEGMENTATION_TAG,"threshold_start:"+String.valueOf(next_flag+i));
+                        thresholdStart = new HashMap<>();
+                        thresholdStart.put("window",window_flag);
+                        thresholdStart.put("sample",next_flag+i);
+                        Log.i(SEGMENTATION_TAG,"threshold_reavlaue:"+String.valueOf(d));
+                    }
+                }
+                else if(thresholdEnd == null){
+                    if(dd<thresholdValue){
+                        Log.i(SEGMENTATION_TAG,"threshold_end:"+String.valueOf(next_flag+i));
+                        thresholdEnd = new HashMap<>();
+                        thresholdEnd.put("window",window_flag);
+                        thresholdEnd.put("sample",next_flag+i);
+                        Log.i(SEGMENTATION_TAG,"threshold_reavlaue:"+String.valueOf(d));
+                    }
+                }
+            }
+        }
+
+        next_flag += DATA_LENGTH;
+    }
+
 
 
 
@@ -349,7 +388,7 @@ public class EcgProcess extends Service {
         HashMap<String, Integer> peak_index;
         peak_index = new HashMap<>();
 
-        int tmp_value = -1;
+        float tmp_value = -1;
         if (thresholdStart != null && thresholdEnd != null) {
             int start_flag = thresholdStart.get("window");
             int end_flag = thresholdEnd.get("window");
@@ -483,13 +522,13 @@ public class EcgProcess extends Service {
                     Log.i("indexd","sliceslicslicslice");
 
 
-                    int[] frontEcg = Arrays.copyOfRange(originalEcg[index.get("front_flag")],
+                    float[] frontEcg = Arrays.copyOfRange(originalEcg[index.get("front_flag")],
                             index.get("front_start"),
                             index.get("front_end"));
-                    int[] backEcg = Arrays.copyOfRange(originalEcg[index.get("back_flag")],
+                    float[] backEcg = Arrays.copyOfRange(originalEcg[index.get("back_flag")],
                             index.get("back_start"),
                             index.get("back_end"));
-                    int[] segmentEcg = new int[frontEcg.length+backEcg.length];
+                    float[] segmentEcg = new float[frontEcg.length+backEcg.length];
                     System.arraycopy(frontEcg,0,segmentEcg,0,frontEcg.length);
                     System.arraycopy(backEcg,0,segmentEcg,frontEcg.length,backEcg.length);
 
@@ -517,12 +556,12 @@ public class EcgProcess extends Service {
         }
     }
 
-    private float[] minMaxScale(int[] data){
-        int minValue=256;
-        int maxValue=-1;
+    private float[] minMaxScale(float[] data){
+        float minValue=99999;
+        float maxValue=-1;
 
         for(int i=0; i<data.length;i++){
-            int d = data[i];
+            float d = data[i];
             if(d>maxValue){
                 maxValue =d;
             }
@@ -532,9 +571,9 @@ public class EcgProcess extends Service {
         }
 
         float[] scaleData = new float[data.length];
-        int under =  maxValue-minValue;
+        float under =  maxValue-minValue;
         for(int i=0; i<data.length; i++){
-            int up = data[i]-minValue;
+            float up = data[i]-minValue;
             scaleData[i] = up/under;
         }
 
@@ -715,7 +754,7 @@ public class EcgProcess extends Service {
         BufferedWriter out = new BufferedWriter(new FileWriter(f,true));
 
         StringBuilder sb = new StringBuilder();
-        for (int s : originalEcg[flag]) {
+        for (float s : originalEcg[flag]) {
             sb.append(String.valueOf(s)).append(",");
         }
         out.write(sb.toString());

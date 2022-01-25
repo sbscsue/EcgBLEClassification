@@ -1,18 +1,13 @@
 package com.example.ecgbleclassification;
 
-import android.Manifest;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;
-import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 
 import android.util.Log;
@@ -26,8 +21,6 @@ import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
-
-import org.w3c.dom.Text;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -91,7 +84,7 @@ public class FragmentAllplot extends Fragment {
                 super.onReceive(context, intent);
                 if(intent.getAction().equals("BLE")){
                     //Log.i(BROADCAST_TAG,intent.getAction());
-                    plot(intent.getByteArrayExtra("BLE_DATA"));
+                    plot(intent.getFloatArrayExtra("BLE_DATA"));
                 }
                 if(intent.getAction().equals("INFORMATION")){
                     Log.i(BROADCAST_TAG,intent.getAction());
@@ -183,6 +176,38 @@ public class FragmentAllplot extends Fragment {
         chart.setData(chart_data);
         chart.invalidate();
     }
+
+
+
+    private void plot(float[] parsingData){
+        Log.i("plot",parsingData.toString());
+
+        for(int i=0; i<parsingData.length; i+=1){
+            Entry d = new Entry();
+
+            d.setX(chart_entry.get(i+flag).getX());
+            d.setY(parsingData[i]);
+
+            chart_entry.set(i+flag,d);
+        }
+        flag += DATA_LENGTH;
+        if(flag==PLOT_LENGTH){
+            flag=0;
+        }
+
+
+        chart_set = null;
+        chart_data = null;
+
+        chart_set = new ArrayList<ILineDataSet>();
+        chart_set.add(new LineDataSet(chart_entry,"ECG"));
+        chart_data = new LineData(chart_set);
+
+        chart.setData(chart_data);
+        chart.invalidate();
+    }
+
+
 
 
 }

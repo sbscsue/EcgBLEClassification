@@ -27,6 +27,10 @@ import android.widget.Toast;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.UUID;
 
 public class BluetoothLeService extends Service {
@@ -37,6 +41,9 @@ public class BluetoothLeService extends Service {
     private boolean gattConnectionState = false;
     private String mac_address;
     BluetoothDevice device;
+
+
+    int DATA_LENGTH;
 
     //default
     private Resources res;
@@ -84,7 +91,7 @@ public class BluetoothLeService extends Service {
 
         //DEFALT
         res = getResources();
-
+        DATA_LENGTH =  res.getInteger(R.integer.data_length);
         preferences = getSharedPreferences(getString(R.string.S_NAME),Context.MODE_PRIVATE);
         editor = preferences.edit();
 
@@ -149,16 +156,21 @@ public class BluetoothLeService extends Service {
     @SuppressLint("MissingPermission")
     //디바이스 등록안해놓고 접근할때 오류 !
     public void connect(){
-        Log.i(SERVICE_TAG,"CONNECT GATT SERVER");
+        Log.i(GATT_TAG,"CONNECT GATT SERVER");
         if(gattConnectionState==false){
             bluetoothGatt = device.connectGatt(this,true,gattCallback);
             if(bluetoothGatt.connect()==true){
-                Log.i(SERVICE_TAG,"TRUE");
+                Log.i(GATT_TAG,"TRUE");
                 gattConnectionState = true;
+
             }
             else{
+                Log.i(GATT_TAG,"FALSE");
                 gattConnectionState = false;
             }
+        }
+        else{
+            bluetoothGatt.discoverServices();
         }
     }
 
@@ -255,9 +267,27 @@ public class BluetoothLeService extends Service {
 
     private void send_ble_data(byte[] data){
         Intent intent = new Intent("BLE");
-        intent.putExtra("BLE_DATA",data);
+        intent.putExtra("BLE_DATA",parsingStringCsvToFloatArray(data));
         sendBroadcast(intent);
     }
+
+    private float[] parsingStringCsvToFloatArray(byte[] data){
+        ByteArrayInputStream bInputStream = new ByteArrayInputStream(data);
+        DataInputStream dInputStream = new DataInputStream(bInputStream);
+        float[] parsingData = new float[DATA_LENGTH];
+
+        for (int i = 0; i < parsingData.length; i++)
+        {
+            try {
+                parsingData[i] = dInputStream.readFloat();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return parsingData;
+    }
+
 
 
     NotificationCompat.Builder builder1 = new NotificationCompat.Builder(this,"CONNECT_STATE")

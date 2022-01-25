@@ -22,16 +22,22 @@
     <string-array name="S_UUID">
         <item>00001523-1212-efde-1523-785feabcd123</item>
         <item>6e400001-b5a3-f393-e0a9-e50e24dcca9e</item>
+        <item>19536e67-3682-4588-9f3a-5340b6712150</item>
+        <!-- For test Serial BLE -->
+
     </string-array>
 
 
     <string-array name="C_UUID">
         <item>00001524-1212-efde-1523-785feabcd123</item>
         <item>6e400003-b5a3-f393-e0a9-e50e24dcca9e</item>
+        <!-- For test Serial BLE -->
+        <item>bc1926ea-6ffa-4d04-928b-76cccd068cea</item>
     </string-array>
 
     <!--BLE DATA RECEIVE SETTING-->
     <integer name="data_length">50</integer>
+    <!--BLE 양 추가-->
     <integer name="sampling_rate">400</integer>
     <string name="period">0.0025</string>
 
