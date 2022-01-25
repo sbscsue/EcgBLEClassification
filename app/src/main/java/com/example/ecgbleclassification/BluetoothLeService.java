@@ -162,23 +162,19 @@ public class BluetoothLeService extends Service {
             if(bluetoothGatt.connect()==true){
                 Log.i(GATT_TAG,"TRUE");
                 gattConnectionState = true;
-
             }
             else{
                 Log.i(GATT_TAG,"FALSE");
                 gattConnectionState = false;
             }
         }
-        else{
-            bluetoothGatt.discoverServices();
-        }
     }
 
     @SuppressLint("MissingPermission")
     public void disconnect(){
-        Log.i(SERVICE_TAG,"DISCONNECT GATT SERVER");
+        Log.i(GATT_TAG,"DISCONNECT GATT SERVER");
         if(gattConnectionState){
-            Log.i(SERVICE_TAG,"TRUE");
+            Log.i(GATT_TAG,"TRUE");
             bluetoothGatt.disconnect();
             bluetoothGatt.close();
             gattConnectionState = false;
@@ -272,20 +268,14 @@ public class BluetoothLeService extends Service {
     }
 
     private float[] parsingStringCsvToFloatArray(byte[] data){
-        ByteArrayInputStream bInputStream = new ByteArrayInputStream(data);
-        DataInputStream dInputStream = new DataInputStream(bInputStream);
-        float[] parsingData = new float[DATA_LENGTH];
+        String segmentStringEcg = new String(data);
+        String [] sampleStringEcg = segmentStringEcg.split(",");
 
-        for (int i = 0; i < parsingData.length; i++)
-        {
-            try {
-                parsingData[i] = dInputStream.readFloat();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        float [] sampleFloatEcg = new float[DATA_LENGTH];
+        for(int i=0; i<DATA_LENGTH; i++){
+            sampleFloatEcg[i] = Float.valueOf(sampleStringEcg[i]);
         }
-
-        return parsingData;
+        return sampleFloatEcg;
     }
 
 

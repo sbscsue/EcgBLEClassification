@@ -23,6 +23,7 @@ import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -180,7 +181,7 @@ public class FragmentAllplot extends Fragment {
 
 
     private void plot(float[] parsingData){
-        Log.i("plot",parsingData.toString());
+        Log.i("plot", Arrays.toString(parsingData));
 
         for(int i=0; i<parsingData.length; i+=1){
             Entry d = new Entry();
