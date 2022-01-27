@@ -26,12 +26,14 @@ import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import com.github.psambit9791.jdsp.filter.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 public class BluetoothLeService extends Service {
     //values
@@ -263,7 +265,13 @@ public class BluetoothLeService extends Service {
 
     private void send_ble_data(byte[] data){
         Intent intent = new Intent("BLE");
-        intent.putExtra("BLE_DATA",parsingStringCsvToFloatArray(data));
+
+        float[] parsingData = parsingStringCsvToFloatArray(data);
+        float[] filterData = baseLineRemoveButterFiltering(parsingData);
+
+
+        float[] sendData = parsingData;
+        intent.putExtra("BLE_DATA",filterData);
         sendBroadcast(intent);
     }
 
@@ -276,6 +284,37 @@ public class BluetoothLeService extends Service {
             sampleFloatEcg[i] = Float.valueOf(sampleStringEcg[i]);
         }
         return sampleFloatEcg;
+    }
+
+    private float[] baseLineRemoveFirFiltering(float[] data){
+        double[] doubleData = new double[data.length];
+        IntStream.range(0, data.length).forEach(index -> doubleData[index] = data[index]);
+
+
+        FIRWin1 filter = new FIRWin1(51,50,400);
+
+        double [] cutOffFr = {0.05,3};
+        double[] coeffs = filter.computeCoefficients(cutOffFr,FIRWin1.FIRfilterType.BANDSTOP,true);
+        double[] filterData = filter.firfilter(coeffs,doubleData);
+
+        float[] floatData = new float[data.length];
+        IntStream.range(0, data.length).forEach(index -> floatData[index] = (float) filterData[index]);
+
+        return floatData;
+    }
+
+    private float[] baseLineRemoveButterFiltering(float[] data){
+        double[] doubleData = new double[data.length];
+        IntStream.range(0, data.length).forEach(index -> doubleData[index] = data[index]);
+
+
+        Butterworth filter = new Butterworth(doubleData,400);
+        double[] filterData = filter.bandStopFilter(4,0.15,0.5);
+
+        float[] floatData = new float[data.length];
+        IntStream.range(0, data.length).forEach(index -> floatData[index] = (float) filterData[index]);
+
+        return floatData;
     }
 
 

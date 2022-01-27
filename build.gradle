@@ -16,5 +16,9 @@ plugins {
 allprojects {
     repositories {
         google()
+        maven {
+            url "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+        }
     }
+
 }
