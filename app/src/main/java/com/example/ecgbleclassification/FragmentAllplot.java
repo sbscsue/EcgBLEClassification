@@ -42,8 +42,7 @@ public class FragmentAllplot extends Fragment {
     int flag = 0;
     private LineChart chart;
     ArrayList<Entry> chart_entry = new ArrayList<Entry>();
-    List<ILineDataSet> chart_set = new ArrayList<ILineDataSet>();
-    LineData chart_data;
+
 
     TextView bpmView;
     TextView predictView;
@@ -119,14 +118,21 @@ public class FragmentAllplot extends Fragment {
             //Log.i("check",Float.toString((float) (Math.floor(i*PERIOD*1000)/1000.0)));
             d.setX((float) (Math.floor(i*PERIOD*1000)/1000.0));
             //d.setX(i+1);
-            d.setY(100);
+            d.setY(1);
             chart_entry.add(d);
         }
 
 
-        chart_set.add(new LineDataSet(chart_entry,"ECG"));
-        chart_data = new LineData(chart_set);
-        chart.setData(chart_data);
+        LineDataSet dataSet = new LineDataSet(chart_entry,"ECG");
+        dataSet.setDrawCircles(false);
+        dataSet.setLineWidth(2);
+
+
+        ArrayList<ILineDataSet> chartSet = new ArrayList<ILineDataSet>();
+        chartSet.add(dataSet);
+
+        LineData lineData = new LineData(chartSet);
+        chart.setData(lineData);
         chart.invalidate();
 
         bpmView = view.findViewById(R.id.bpmAll);
@@ -167,21 +173,28 @@ public class FragmentAllplot extends Fragment {
         }
 
 
-        chart_set = null;
-        chart_data = null;
+        chart.clear();
 
-        chart_set = new ArrayList<ILineDataSet>();
-        chart_set.add(new LineDataSet(chart_entry,"ECG"));
-        chart_data = new LineData(chart_set);
+        LineDataSet dataSet = new LineDataSet(chart_entry,"ECG");
+        dataSet.setDrawCircles(false);
+        dataSet.setLineWidth(2);
 
-        chart.setData(chart_data);
+        //https://weeklycoding.com/mpandroidchart-documentation/chartdata/
+
+        ArrayList<ILineDataSet> chartSet = new ArrayList<ILineDataSet>();
+        chartSet.add(dataSet);
+
+        LineData lineData = new LineData(chartSet);
+        chart.setData(lineData);
+
+
         chart.invalidate();
     }
 
 
 
     private void plot(float[] parsingData){
-        Log.i("plot", Arrays.toString(parsingData));
+        //Log.i("plot", Arrays.toString(parsingData));
 
         for(int i=0; i<parsingData.length; i+=1){
             Entry d = new Entry();
@@ -197,14 +210,22 @@ public class FragmentAllplot extends Fragment {
         }
 
 
-        chart_set = null;
-        chart_data = null;
+        chart.clear();
 
-        chart_set = new ArrayList<ILineDataSet>();
-        chart_set.add(new LineDataSet(chart_entry,"ECG"));
-        chart_data = new LineData(chart_set);
+        LineDataSet dataSet = new LineDataSet(chart_entry,"ECG");
+        dataSet.setDrawCircles(false);
+        dataSet.setLineWidth(2);
 
-        chart.setData(chart_data);
+        //https://weeklycoding.com/mpandroidchart-documentation/chartdata/
+
+       ArrayList<ILineDataSet> chartSet = new ArrayList<ILineDataSet>();
+       chartSet.add(dataSet);
+
+
+        LineData lineData = new LineData(chartSet);
+        chart.setData(lineData);
+
+
         chart.invalidate();
     }
 

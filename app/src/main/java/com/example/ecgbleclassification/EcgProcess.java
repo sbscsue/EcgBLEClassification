@@ -193,7 +193,7 @@ public class EcgProcess extends Service {
             public void onReceive(Context context, Intent intent) {
                 super.onReceive(context, intent);
                 if(intent.getAction().equals("BLE")){
-                    //Log.i(BROADCAST_TAG,intent.getAction());
+                    Log.i(BROADCAST_TAG,intent.getAction());
                     setWindow(intent.getFloatArrayExtra("BLE_DATA"));
                     findPeak();
                     setSegment();
@@ -290,13 +290,13 @@ public class EcgProcess extends Service {
 
     public void setThresholdValue(){
         Log.v(FUNCTION_TAG,"user:setThresholdValue()");
-        int sum = 0;
+        float sum = 0;
         for(int i=0; i<WINDOW_LENGTH; i++){
             sum +=  squareEcg[0][i];
         }
-
+        Log.i("threshold_sum",String.valueOf(sum));
         thresholdMode=1;
-        thresholdValue = (float) ((sum / WINDOW_LENGTH)*1.45);
+        thresholdValue = (float) ((sum / WINDOW_LENGTH)*3);
         Log.i(SEGMENTATION_TAG,"threshold_value:"+String.valueOf(thresholdValue));
 
         window_flag=0;
@@ -323,7 +323,7 @@ public class EcgProcess extends Service {
                         thresholdStart = new HashMap<>();
                         thresholdStart.put("window",window_flag);
                         thresholdStart.put("sample",next_flag+i);
-                        Log.i(SEGMENTATION_TAG,"threshold_reavlaue:"+String.valueOf(d));
+                        Log.i(SEGMENTATION_TAG,"threshold_realvalue:"+String.valueOf(d));
                     }
                 }
                 else if(thresholdEnd == null){
@@ -332,7 +332,7 @@ public class EcgProcess extends Service {
                         thresholdEnd = new HashMap<>();
                         thresholdEnd.put("window",window_flag);
                         thresholdEnd.put("sample",next_flag+i);
-                        Log.i(SEGMENTATION_TAG,"threshold_reavlaue:"+String.valueOf(d));
+                        Log.i(SEGMENTATION_TAG,"threshold_realvalue:"+String.valueOf(d));
                     }
                 }
             }
@@ -362,7 +362,7 @@ public class EcgProcess extends Service {
                         thresholdStart = new HashMap<>();
                         thresholdStart.put("window",window_flag);
                         thresholdStart.put("sample",next_flag+i);
-                        Log.i(SEGMENTATION_TAG,"threshold_reavlaue:"+String.valueOf(d));
+                        Log.i(SEGMENTATION_TAG,"threshold_realvaue:"+String.valueOf(d));
                     }
                 }
                 else if(thresholdEnd == null){
@@ -371,7 +371,7 @@ public class EcgProcess extends Service {
                         thresholdEnd = new HashMap<>();
                         thresholdEnd.put("window",window_flag);
                         thresholdEnd.put("sample",next_flag+i);
-                        Log.i(SEGMENTATION_TAG,"threshold_reavlaue:"+String.valueOf(d));
+                        Log.i(SEGMENTATION_TAG,"threshold_realvaue:"+String.valueOf(d));
                     }
                 }
             }
@@ -533,15 +533,16 @@ public class EcgProcess extends Service {
                     System.arraycopy(backEcg,0,segmentEcg,frontEcg.length,backEcg.length);
 
                     float[] minMaxSegmentEcg = minMaxScale(segmentEcg);
+                    if(reCheckSegment(minMaxSegmentEcg)){
+                        int bpm = getBpm(index.get("peak_sample"));
+                        String predictAnn = predict(minMaxSegmentEcg);
+
+
+                        setNotification(bpm,predictAnn);
+                        setSegmentPlot(minMaxSegmentEcg,bpm,predictAnn);
+                        saveLocalSegmentIndex(index,bpm,predictAnn);
+                    }
                     //forDebug(index,segmentEcg);
-
-                    int bpm = getBpm(index.get("peak_sample"));
-                    String predictAnn = predict(minMaxSegmentEcg);
-
-
-                    setNotification(bpm,predictAnn);
-                    setSegmentPlot(minMaxSegmentEcg,bpm,predictAnn);
-                    saveLocalSegmentIndex(index,bpm,predictAnn);
 
                     segmentIndexs.poll();
                 }
@@ -581,6 +582,17 @@ public class EcgProcess extends Service {
         return scaleData;
     }
 
+    private boolean reCheckSegment(float[] minMaxData){
+        int flag = minMaxData.length/2;
+        Log.i("CHECK_RECHECKSEGMENT",String.valueOf(minMaxData[flag]));
+        if((minMaxData[flag]==1.0)) {
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
+
 
     public int getBpm(int currentRpeak){
         Log.v(FUNCTION_TAG,"user:getBpm()");
@@ -614,12 +626,15 @@ public class EcgProcess extends Service {
 
 
         float[][] output = new float[1][OUTPUT_LENGTH];
+        Log.i(TENSORFLOW_TAG,Arrays.deepToString(output));
         interpreter.run(input,output);
 
-        double value = 0;
+        Log.i(TENSORFLOW_TAG,Arrays.deepToString(output));
+        float value = -1;
         int flag = 0;
-        for(int i=0; i< output.length; i++){
+        for(int i=0; i< output[0].length; i++){
             if(output[0][i]>=value){
+                Log.i(TENSORFLOW_TAG,"upup");
                 flag = i;
                 value = output[0][i];
             }

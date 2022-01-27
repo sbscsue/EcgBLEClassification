@@ -280,6 +280,7 @@ public class BluetoothLeService extends Service {
 
 
 
+
     NotificationCompat.Builder builder1 = new NotificationCompat.Builder(this,"CONNECT_STATE")
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("ECG MONITORING DEVICE")

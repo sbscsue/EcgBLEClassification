@@ -36,6 +36,7 @@ android {
 
     aaptOptions {
         noCompress "tflite"
+        noCompress "lite"
     }
 }
 
@@ -59,13 +60,16 @@ dependencies {
     implementation 'androidx.preference:preference:1.1.1'
 
     implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
+    implementation 'com.github.psambit9791:jdsp:1.0.0'
+
+    implementation 'org.tensorflow:tensorflow-lite:+'
 
     implementation platform('com.google.firebase:firebase-bom:29.0.0')
     implementation 'com.google.firebase:firebase-database'
     implementation 'com.google.firebase:firebase-core:11.8.0'
     implementation 'com.google.firebase:firebase-auth:11.8.0'
 
-    implementation 'org.tensorflow:tensorflow-lite:+'
+
 
 
 }
