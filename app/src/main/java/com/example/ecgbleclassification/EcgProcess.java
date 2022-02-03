@@ -121,6 +121,8 @@ public class EcgProcess extends Service {
     File segmentIndexFile;
     File windowFile;
 
+
+    File f;
     IBinder serviceBinder = new EcgBinder();
     class EcgBinder extends Binder {
        EcgProcess getService() {
@@ -194,10 +196,31 @@ public class EcgProcess extends Service {
                 super.onReceive(context, intent);
                 if(intent.getAction().equals("BLE")){
                     Log.i(BROADCAST_TAG,intent.getAction());
-                    setWindow(intent.getFloatArrayExtra("BLE_DATA"));
-                    findPeak();
-                    setSegment();
-                    switchWindow();
+                    float[] bleData = intent.getFloatArrayExtra("BLE_DATA");
+                    float[] minData = minMaxScale(bleData);
+
+                    Log.i("배열체크2",Arrays.toString(bleData));
+                    Log.i("배열체크3",Arrays.toString(minData));
+                    Log.i("개수체크",String.valueOf(bleData.length));
+                    //setWindow(bleData);
+
+                    String predict = predict(minData);
+                    setSegmentPlot(minData);
+
+                    BufferedWriter out = null;
+                    try {
+                        out = new BufferedWriter(new FileWriter(f,true));
+                        out.write(predict+"\n");
+                        out.flush();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+
+
+
+
+
                 }
             }
         };
@@ -230,6 +253,7 @@ public class EcgProcess extends Service {
         });
 
         initalizeLocalSave();
+        f = new File(windowFile,String.valueOf(cnt)+".csv");
 
 
 
@@ -507,7 +531,7 @@ public class EcgProcess extends Service {
 
     }
 
-    private void setSegment()  {
+    private void setSegment(float[] bleData)  {
         Log.v(FUNCTION_TAG,"user:setSegment()");
        //Log.i(SEGMENTATION_TAG,String.valueOf(segmentIndexs.size()));
         while(!segmentIndexs.isEmpty()){
@@ -671,6 +695,18 @@ public class EcgProcess extends Service {
         intent.putExtra("PREDICT",predict);
         //intent.putExtra("predict",predict);
         sendBroadcast(intent);
+
+    }
+
+
+    public void setSegmentPlot(float[] data){
+        Log.v(FUNCTION_TAG,"user:segmentPlot()");
+        Intent intent = new Intent("segmentation");
+        intent.putExtra("data",data);
+        sendBroadcast(intent);
+
+
+
 
     }
 

@@ -63,11 +63,10 @@ public class BluetoothLeService extends Service {
 
     //service
     Intent intent;
+    private int SEGMENT_LENGTH;
 
-
-
-
-
+    float[] buffer;
+    int flag;
 
     public BluetoothLeService() {
 
@@ -94,13 +93,15 @@ public class BluetoothLeService extends Service {
         //DEFALT
         res = getResources();
         DATA_LENGTH =  res.getInteger(R.integer.data_length);
+        SEGMENT_LENGTH =  res.getInteger(R.integer.segment_length);
         preferences = getSharedPreferences(getString(R.string.S_NAME),Context.MODE_PRIVATE);
         editor = preferences.edit();
 
         manager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = manager.getAdapter();
 
-
+        buffer = new float[SEGMENT_LENGTH*2];
+        flag = 0 ;
 
         //계속 켜지게
         //startForegroundService(intent);
@@ -241,6 +242,7 @@ public class BluetoothLeService extends Service {
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
             super.onCharacteristicChanged(gatt, characteristic);
             Log.i(GATT_TAG,"GATT DATA NOTIFY");
+            Log.i(GATT_TAG,String.valueOf(flag));
 
             byte[] data = characteristic.getValue();
             send_ble_data(data);
@@ -267,12 +269,18 @@ public class BluetoothLeService extends Service {
         Intent intent = new Intent("BLE");
 
         float[] parsingData = parsingStringCsvToFloatArray(data);
-        float[] filterData = baseLineRemoveButterFiltering(parsingData);
+        Log.i("배열체크",Arrays.toString(parsingData));
+        if(flag != 4){
+            System.arraycopy(parsingData,0,buffer,flag*parsingData.length,parsingData.length);
+            flag+=1;
+        }
+        if(flag==4){
+            flag = 0;
+            Log.i("배열체크","보냄");
+            intent.putExtra("BLE_DATA",buffer);
+            sendBroadcast(intent);
+        }
 
-
-        float[] sendData = parsingData;
-        intent.putExtra("BLE_DATA",filterData);
-        sendBroadcast(intent);
     }
 
     private float[] parsingStringCsvToFloatArray(byte[] data){

@@ -36,15 +36,15 @@
     </string-array>
 
     <!--BLE DATA RECEIVE SETTING-->
-    <integer name="data_length">50</integer>
+    <integer name="data_length">80</integer>
     <!--BLE 양 추가-->
     <integer name="sampling_rate">400</integer>
     <string name="period">0.0025</string>
 
     <!--PLOT LENGTH-->
-    <integer name="all_plot_length">4000</integer>
+    <integer name="all_plot_length">3200</integer>
     <!--WINDOW SETTING-->
-    <integer name="window_length">4000</integer>
+    <integer name="window_length">3200</integer>
     <!--SEGMENT LENGTH(half)-->
     <integer name="segment_length">160</integer>
 
