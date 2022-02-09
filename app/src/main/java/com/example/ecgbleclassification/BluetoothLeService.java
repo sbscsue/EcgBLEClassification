@@ -107,9 +107,9 @@ public class BluetoothLeService extends Service {
         manager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = manager.getAdapter();
 
+        chebyshevIFilter.highPass(3    ,400,3,3);
         butterworthLowPassFilter.lowPass(21,400,40);
-        chebyshevIFilter.highPass(21    ,400,.3,3);
-        butterworthHightPassFilter.highPass(12,400,.15);
+        butterworthHightPassFilter.highPass(3,400,3);
 
 
         //계속 켜지게
@@ -253,7 +253,8 @@ public class BluetoothLeService extends Service {
             Log.i(GATT_TAG,"GATT DATA NOTIFY");
 
             byte[] data = characteristic.getValue();
-            send_ble_data(data);
+            //sendBleData(data);
+            sendBleDataTestUse_filter(data);
         }
 
 
@@ -273,7 +274,7 @@ public class BluetoothLeService extends Service {
     };
 
 
-    private void send_ble_data(byte[] data){
+    private void sendBleData(byte[] data){
         Intent intent = new Intent("BLE");
 
         float[] parsingData = parsingStringCsvToFloatArray(data);
@@ -281,7 +282,26 @@ public class BluetoothLeService extends Service {
 
         intent.putExtra("BLE_DATA",filterData);
         sendBroadcast(intent);
+
     }
+
+    private void sendBleDataTestUse_filter(byte[] data){
+        Intent intent = new Intent("BLE");
+
+        float[] parsingData = parsingStringCsvToFloatArray(data);
+        float[] filterData = baseLineRemoveButterFiltering(parsingData);
+
+
+        float[] allData = new float[parsingData.length*2];
+        //복붙!!
+        System.arraycopy(parsingData,0,allData,0,parsingData.length);
+        System.arraycopy(filterData,0,allData,parsingData.length,filterData.length);
+        intent.putExtra("TestUse_filter",allData);
+        sendBroadcast(intent);
+
+    }
+
+
 
     private float[] parsingStringCsvToFloatArray(byte[] data){
         String segmentStringEcg = new String(data);
@@ -304,8 +324,9 @@ public class BluetoothLeService extends Service {
         double[] filterData = new double[data.length];
         float[] floatData = new float[data.length];
         for(int i=0; i<doubleData.length; i++){
-            //filterData[i] = butterworthLowPassFilter.filter(doubleData[i]);
-            filterData[i] = chebyshevIFilter.filter(doubleData[i]);
+            filterData[i] = doubleData[i];
+            filterData[i] = butterworthLowPassFilter.filter(filterData[i]);
+            filterData[i] = chebyshevIFilter.filter(filterData[i]);
             floatData[i] = (float) filterData[i];
 
 

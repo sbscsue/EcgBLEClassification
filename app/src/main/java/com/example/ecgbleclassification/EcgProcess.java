@@ -194,10 +194,13 @@ public class EcgProcess extends Service {
                 super.onReceive(context, intent);
                 if(intent.getAction().equals("BLE")){
                     Log.i(BROADCAST_TAG,intent.getAction());
+                    /*
                     setWindow(intent.getFloatArrayExtra("BLE_DATA"));
                     findPeak();
                     setSegment();
                     switchWindow();
+
+                     */
                 }
             }
         };

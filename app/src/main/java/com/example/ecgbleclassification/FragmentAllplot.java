@@ -42,6 +42,7 @@ public class FragmentAllplot extends Fragment {
     int flag = 0;
     private LineChart chart;
     ArrayList<Entry> chart_entry = new ArrayList<Entry>();
+    ArrayList<Entry> chartEntryTestUse_filter = new ArrayList<Entry>();
 
 
     TextView bpmView;
@@ -84,7 +85,8 @@ public class FragmentAllplot extends Fragment {
                 super.onReceive(context, intent);
                 if(intent.getAction().equals("BLE")){
                     //Log.i(BROADCAST_TAG,intent.getAction());
-                    plot(intent.getFloatArrayExtra("BLE_DATA"));
+                    //plot(intent.getFloatArrayExtra("BLE_DATA"));
+                    plotTestUse_filter(intent.getFloatArrayExtra("TestUse_filter"));
                 }
                 if(intent.getAction().equals("INFORMATION")){
                     Log.i(BROADCAST_TAG,intent.getAction());
@@ -110,6 +112,7 @@ public class FragmentAllplot extends Fragment {
         chart.setTouchEnabled(true);
 
 
+
         //x,y축 고정
 
         for(int i=0; i< PLOT_LENGTH; i++){
@@ -120,6 +123,7 @@ public class FragmentAllplot extends Fragment {
             //d.setX(i+1);
             d.setY(1);
             chart_entry.add(d);
+            chartEntryTestUse_filter.add(d);
         }
 
 
@@ -228,6 +232,56 @@ public class FragmentAllplot extends Fragment {
 
         chart.invalidate();
     }
+
+    private void plotTestUse_filter( float[] originalAndFilterData){
+        Log.i("TEST", Arrays.toString(originalAndFilterData));
+
+        int n = originalAndFilterData.length/2;
+        for(int i=0; i<n; i+=1){
+            Entry d1 = new Entry();
+
+            d1.setX(chart_entry.get(i+flag).getX());
+            d1.setY(originalAndFilterData[i]);
+
+            Entry d2 = new Entry();
+            d2.setX(chartEntryTestUse_filter.get(i+flag).getX());
+            d2.setY(originalAndFilterData[i+n]);
+
+            chart_entry.set(i+flag,d1);
+            chartEntryTestUse_filter.set(i+flag,d2);
+        }
+        flag += DATA_LENGTH;
+        if(flag==PLOT_LENGTH){
+            flag=0;
+        }
+
+
+        chart.clear();
+
+        LineDataSet dataSet = new LineDataSet(chart_entry,"original");
+        dataSet.setDrawCircles(false);
+        dataSet.setLineWidth(2);
+        dataSet.setColor(R.color.black);
+
+        LineDataSet dataSetTestUse_filter = new LineDataSet(chartEntryTestUse_filter,"filter");
+        dataSetTestUse_filter.setDrawCircles(false);
+        dataSetTestUse_filter.setLineWidth(2);
+
+
+        //https://weeklycoding.com/mpandroidchart-documentation/chartdata/
+
+        ArrayList<ILineDataSet> chartSet = new ArrayList<ILineDataSet>();
+        chartSet.add(dataSet);
+        chartSet.add(dataSetTestUse_filter);
+
+
+        LineData lineData = new LineData(chartSet);
+        chart.setData(lineData);
+
+
+        chart.invalidate();
+    }
+
 
 
 
