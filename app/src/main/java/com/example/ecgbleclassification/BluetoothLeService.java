@@ -26,7 +26,6 @@ import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
-import com.github.psambit9791.jdsp.filter.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -34,6 +33,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.stream.IntStream;
+import uk.me.berndporr.iirj.Butterworth;
+import uk.me.berndporr.iirj.ChebyshevI;
 
 public class BluetoothLeService extends Service {
     //values
@@ -63,6 +64,12 @@ public class BluetoothLeService extends Service {
 
     //service
     Intent intent;
+
+    Butterworth butterworthHightPassFilter = new Butterworth();
+    Butterworth butterworthLowPassFilter = new Butterworth();
+
+    ChebyshevI chebyshevIFilter = new ChebyshevI();
+
 
 
 
@@ -100,6 +107,9 @@ public class BluetoothLeService extends Service {
         manager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = manager.getAdapter();
 
+        butterworthLowPassFilter.lowPass(21,400,40);
+        chebyshevIFilter.highPass(21    ,400,.3,3);
+        butterworthHightPassFilter.highPass(12,400,.15);
 
 
         //계속 켜지게
@@ -269,8 +279,6 @@ public class BluetoothLeService extends Service {
         float[] parsingData = parsingStringCsvToFloatArray(data);
         float[] filterData = baseLineRemoveButterFiltering(parsingData);
 
-
-        float[] sendData = parsingData;
         intent.putExtra("BLE_DATA",filterData);
         sendBroadcast(intent);
     }
@@ -286,33 +294,25 @@ public class BluetoothLeService extends Service {
         return sampleFloatEcg;
     }
 
-    private float[] baseLineRemoveFirFiltering(float[] data){
-        double[] doubleData = new double[data.length];
-        IntStream.range(0, data.length).forEach(index -> doubleData[index] = data[index]);
 
-
-        FIRWin1 filter = new FIRWin1(51,50,400);
-
-        double [] cutOffFr = {0.05,3};
-        double[] coeffs = filter.computeCoefficients(cutOffFr,FIRWin1.FIRfilterType.BANDSTOP,true);
-        double[] filterData = filter.firfilter(coeffs,doubleData);
-
-        float[] floatData = new float[data.length];
-        IntStream.range(0, data.length).forEach(index -> floatData[index] = (float) filterData[index]);
-
-        return floatData;
-    }
 
     private float[] baseLineRemoveButterFiltering(float[] data){
+        Log.i("baselineRemove","check");
         double[] doubleData = new double[data.length];
         IntStream.range(0, data.length).forEach(index -> doubleData[index] = data[index]);
 
-
-        Butterworth filter = new Butterworth(doubleData,400);
-        double[] filterData = filter.bandStopFilter(4,0.15,0.5);
-
+        double[] filterData = new double[data.length];
         float[] floatData = new float[data.length];
-        IntStream.range(0, data.length).forEach(index -> floatData[index] = (float) filterData[index]);
+        for(int i=0; i<doubleData.length; i++){
+            //filterData[i] = butterworthLowPassFilter.filter(doubleData[i]);
+            filterData[i] = chebyshevIFilter.filter(doubleData[i]);
+            floatData[i] = (float) filterData[i];
+
+
+            Log.i("baselineRemove_Double",String.valueOf(filterData[i]));
+            Log.i("baselineRemove_Float",String.valueOf(floatData[i]));
+        }
+
 
         return floatData;
     }
