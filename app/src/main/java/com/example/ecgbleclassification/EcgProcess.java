@@ -40,6 +40,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Queue;
 
 public class EcgProcess extends Service {
@@ -101,8 +102,8 @@ public class EcgProcess extends Service {
     float[][] originalEcg;
     float[][] squareEcg;
 
-    int dataFlag;
     int windowFlag;
+    int dataFlag;
 
     //threshold
     int thresholdMode;
@@ -193,19 +194,24 @@ public class EcgProcess extends Service {
                     Log.i(BROADCAST_TAG,intent.getAction());
                     setWindow(intent.getFloatArrayExtra("BLE_DATA"));
                     //
-                    if (thresholdMode==1){
-                        //미분
-                        //제곱
-                        //평균
-                        //구간 찾기
-
+                    if (thresholdMode==-1){
+                        if(dataFlag>SAMPLING_LATE*2){
+                            differSignalFiltering(10);
+                            squareSignalFiltering();
+                            averageSignalFiltering(50);
+                            findThresholdUpDown();
+                        }
+                    }
+                    else{
+                        differSignalFiltering(10);
+                        squareSignalFiltering();
+                        averageSignalFiltering(50);
+                        findThresholdUpDown();
                     }
                     updateDataFlag();
-                    //find peak
                     if(thresholdMode==1){
                         findPeak();
-                        //segmentation
-                        //....이후 작업들
+                        setSegment();
                     }
                     switchWindow();
 
@@ -336,27 +342,101 @@ public class EcgProcess extends Service {
 
     }
 
-    private void differSignalFiltering(int startIndex,int length,float[] signal){
-        for(int i=startIndex; i< startIndex+length; i++){
-            if (checkWindow()) {
 
+    private void differSignalFiltering(int length){
+        if (checkWindowCntIndexExcess(length)) {
+            int frontN =(dataFlag - length)*(-1);
+            int backN = length-frontN;
+
+            HashMap<String,Integer> frontStart = new HashMap();
+            frontStart.put("windowFlag",otherwindowFlag(windowFlag));
+            frontStart.put("dataFlag",WINDOW_LENGTH + frontN);
+
+            HashMap<String,Integer> backStart = new HashMap();
+            frontStart.put("windowFlag",windowFlag);
+            frontStart.put("dataFlag",backN);
+
+            float[] originalArray = new float[frontN+length];
+            float[] caculateArray = new float[length];
+
+            System.arraycopy(originalEcg[frontStart.get("windowFlag")],frontStart.get("dataFlag"),originalArray,0,frontN);
+            System.arraycopy(originalEcg[backStart.get("windowFlag")],backStart.get("dataFlag"),originalArray,frontN,backN);
+
+            for(int i=0; i<length; i++){
+                int flag = i+length;
+                caculateArray[i] = originalArray[flag] -originalArray[flag-length] ;
             }
+
+            System.arraycopy(caculateArray,0,squareEcg[windowFlag],dataFlag,DATA_LENGTH);
+        }
+        else{
+            for(int i=dataFlag; i< dataFlag+DATA_LENGTH; i++){
+                squareEcg[windowFlag][i] =originalEcg[windowFlag][dataFlag]-originalEcg[windowFlag][i-length];
+            }
+
+        }
+
+
+    }
+
+
+    private void squareSignalFiltering(){
+        for(int i=dataFlag; i< dataFlag+DATA_LENGTH; i++){
+            squareEcg[windowFlag][i] =  (float)Math.pow(squareEcg[windowFlag][i],2);
         }
     }
 
-    private void squareSignalFiltering(int startIndex,int length,float[] signal){
-        for(int i=startIndex; i< startIndex+length; i++){
+
+    private void averageSignalFiltering(int length){
+        if (checkWindowCntIndexExcess(length)) {
+            int frontN =(dataFlag - length)*(-1);
+            int backN = length-frontN;
+
+            HashMap<String,Integer> frontStart = new HashMap();
+            frontStart.put("windowFlag",otherwindowFlag(windowFlag));
+            frontStart.put("dataFlag",WINDOW_LENGTH + frontN);
+
+            HashMap<String,Integer> backStart = new HashMap();
+            frontStart.put("windowFlag",windowFlag);
+            frontStart.put("dataFlag",backN);
+
+            float[] originalArray = new float[frontN+length];
+            float[] caculateArray = new float[length];
+
+            System.arraycopy(originalEcg[frontStart.get("windowFlag")],frontStart.get("dataFlag"),originalArray,0,frontN);
+            System.arraycopy(originalEcg[backStart.get("windowFlag")],backStart.get("dataFlag"),originalArray,frontN,backN);
+
+            for(int i=0; i<length; i++){
+                int flag = i+length;
+                float sum = 0;
+                for(int j =flag-length; j<=flag; j++){
+                    sum += originalArray[j];
+                }
+                caculateArray[i] = sum / (length+1);
+            }
+
+            System.arraycopy(caculateArray,0,squareEcg[windowFlag],dataFlag,DATA_LENGTH);
+        }
+        else{
+            for(int i=dataFlag; i< dataFlag+DATA_LENGTH; i++){
+                float sum = 0;
+                for(int j = i-length; j<=i; j++){
+                    sum += originalEcg[windowFlag][j];
+                }
+                squareEcg[windowFlag][i] = sum/(length+1);
+            }
 
         }
     }
-    private void averageSignalFiltering(int startIndex,int length,float[] signal){
-        for(int i=startIndex; i< startIndex+length; i++){
 
+
+    private boolean checkWindowCntIndexExcess(int cnt){
+        if(-cnt<0){
+            return true;
         }
-    }
-
-    private boolean checkWindow(int index){
-        if(index-)
+        else{
+            return false;
+        }
     }
 
 
