@@ -106,6 +106,7 @@ public class EcgProcess extends Service {
     int dataFlag;
 
     //threshold
+    static int thresholdSetCnt;
     int thresholdMode;
     float thresholdValue;
     HashMap<String, Integer> thresholdStart;
@@ -192,20 +193,13 @@ public class EcgProcess extends Service {
                 super.onReceive(context, intent);
                 if(intent.getAction().equals("BLE")){
                     Log.i(BROADCAST_TAG,intent.getAction());
-                    setWindow(intent.getFloatArrayExtra("BLE_DATA"));
+                    setData(intent.getFloatArrayExtra("BLE_DATA"));
                     //
-                    if (thresholdMode==-1){
-                        if(dataFlag>SAMPLING_LATE*2){
-                            differSignalFiltering(10);
-                            squareSignalFiltering();
-                            averageSignalFiltering(50);
-                            findThresholdUpDown();
-                        }
-                    }
-                    else{
-                        differSignalFiltering(10);
-                        squareSignalFiltering();
-                        averageSignalFiltering(50);
+                    differSignalFiltering(10);
+                    squareSignalFiltering();
+                    averageSignalFiltering(50);
+                    //findThresholdUpDown();
+                    if (thresholdMode==1){
                         findThresholdUpDown();
                     }
                     updateDataFlag();
@@ -284,30 +278,30 @@ public class EcgProcess extends Service {
         stopForeground(true);
     }
 
-    private void timestampLocalSave(LocalDateTime endTime) throws IOException {
-        Log.v(FUNCTION_TAG,"user:timestampLocalSave");
-        String folderName = Environment.getExternalStorageDirectory().getAbsolutePath()+"/EcgData";
-        File folder = new File(folderName);
-        String fileName = "timeStamp.txt";
-        File file = new File(folder,fileName);
+        private void timestampLocalSave(LocalDateTime endTime) throws IOException {
+            Log.v(FUNCTION_TAG,"user:timestampLocalSave");
+            String folderName = Environment.getExternalStorageDirectory().getAbsolutePath()+"/EcgData";
+            File folder = new File(folderName);
+            String fileName = "timeStamp.txt";
+            File file = new File(folder,fileName);
 
 
-        BufferedWriter out =new BufferedWriter(new FileWriter(file,true));
+            BufferedWriter out =new BufferedWriter(new FileWriter(file,true));
 
-        StringBuilder record = new StringBuilder()
-                .append(startTime.format(DateTimeFormatter.ofPattern("yyyyMMddHHmm")))
-                .append(" ")
-                .append(endTime.format(DateTimeFormatter.ofPattern("yyyyMMddHHmm")))
-                .append("\n");
+            StringBuilder record = new StringBuilder()
+                    .append(startTime.format(DateTimeFormatter.ofPattern("yyyyMMddHHmm")))
+                    .append(" ")
+                    .append(endTime.format(DateTimeFormatter.ofPattern("yyyyMMddHHmm")))
+                    .append("\n");
 
-        out.write(record.toString());
-        out.flush();
-        out.close();
-    }
+            out.write(record.toString());
+            out.flush();
+            out.close();
+        }
 
 
-    private void setWindow(float[] data){
-        Log.v(FUNCTION_TAG,"user:setWindow()");
+    private void setData(float[] data){
+        Log.v(FUNCTION_TAG,"user:setData()");
         for(int i=0; i<DATA_LENGTH; i+=1){
             originalEcg[windowFlag][dataFlag+i] = data[i];
             squareEcg[windowFlag][dataFlag+i] = data[i];
@@ -324,23 +318,29 @@ public class EcgProcess extends Service {
         Log.v(FUNCTION_TAG,"user:switchWindow()");
         if(dataFlag==WINDOW_LENGTH){
             dataFlag=0;
-            if(thresholdMode==-1){
-                setFirstThresholdValue();
+            if(windowCnt%thresholdSetCnt==0){
+                setThresholdValue(SAMPLING_LATE*3);
             }
-            else{
-                try {
-                    saveLocalWindow(windowFlag,windowCnt);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+
+            try {
+                saveLocalWindow(windowFlag,windowCnt);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
+
             windowFlag = otherwindowFlag(windowFlag);
             windowCnt+=1;
         }
     }
-    private void setFirstThresholdValue(float[] signal){
-
-    }
+        private void setThresholdValue(int startIndex){
+                float sum = 0;
+                int endIndex = squareEcg[windowFlag].length;
+                for(int i =startIndex; i< endIndex; i++){
+                    sum += squareEcg[windowFlag][i];
+                }
+                thresholdValue = sum / (endIndex-startIndex);
+                thresholdMode = 1 ;
+        }
 
 
     private void differSignalFiltering(int length){
@@ -430,17 +430,14 @@ public class EcgProcess extends Service {
     }
 
 
-    private boolean checkWindowCntIndexExcess(int cnt){
-        if(-cnt<0){
-            return true;
+        private boolean checkWindowCntIndexExcess(int cnt){
+            if(-cnt<0){
+                return true;
+            }
+            else{
+                return false;
+            }
         }
-        else{
-            return false;
-        }
-    }
-
-
-
 
 
 
@@ -454,7 +451,7 @@ public class EcgProcess extends Service {
                     thresholdStart = new HashMap<>();
                     thresholdStart.put("window",windowFlag);
                     thresholdStart.put("sample",dataFlag+i);
-                    Log.i(SEGMENTATION_TAG,"threshold_realvaue:"+String.valueOf(d));
+                    Log.i(SEGMENTATION_TAG,"threshold_realvaue:"+String.valueOf(data));
                 }
             }
             else if(thresholdEnd == null){
@@ -463,12 +460,11 @@ public class EcgProcess extends Service {
                     thresholdEnd = new HashMap<>();
                     thresholdEnd.put("window",windowFlag);
                     thresholdEnd.put("sample",dataFlag+i);
-                    Log.i(SEGMENTATION_TAG,"threshold_realvaue:"+String.valueOf(d));
+                    Log.i(SEGMENTATION_TAG,"threshold_realvaue:"+String.valueOf(data));
                 }
             }
         }
     }
-
 
 
 
@@ -521,82 +517,82 @@ public class EcgProcess extends Service {
     }
 
 
-    private void setSegmentIndex(HashMap<String,Integer> peak_index){
-        Log.v(FUNCTION_TAG,"user:setSegmentIndex()");
-        int p = peak_index.get("sample");
-        int start = p - SEGMENT_LENGTH;
-        int end = p  + SEGMENT_LENGTH;
+        private void setSegmentIndex(HashMap<String,Integer> peak_index){
+            Log.v(FUNCTION_TAG,"user:setSegmentIndex()");
+            int p = peak_index.get("sample");
+            int start = p - SEGMENT_LENGTH;
+            int end = p  + SEGMENT_LENGTH;
 
-        int front_start = 0;
-        int front_end = 0;
-        int front_flag = 0;
+            int front_start = 0;
+            int front_end = 0;
+            int front_flag = 0;
 
-        int back_start = 0;
-        int back_end = 0;
-        int back_flag = 0;
+            int back_start = 0;
+            int back_end = 0;
+            int back_flag = 0;
 
-        int flag = peak_index.get("window");
-        HashMap<String,Integer> segment_index = new HashMap<String,Integer>();
+            int flag = peak_index.get("window");
+            HashMap<String,Integer> segment_index = new HashMap<String,Integer>();
 
-        if((start > 0) && (end < WINDOW_LENGTH)){
-            front_start = start;
-            front_end = p;
-            front_flag = peak_index.get("window");
+            if((start > 0) && (end < WINDOW_LENGTH)){
+                front_start = start;
+                front_end = p;
+                front_flag = peak_index.get("window");
 
-            back_start = p;
-            back_end = end;
-            back_flag = peak_index.get("window");
+                back_start = p;
+                back_end = end;
+                back_flag = peak_index.get("window");
+
+            }
+            else if (start<0){
+                front_flag = otherwindowFlag(flag);
+                front_start = WINDOW_LENGTH + start;
+                front_end = WINDOW_LENGTH;
+
+                back_start = flag;
+                back_end = end;
+                back_flag = flag;
+
+
+            }
+            else if (end>WINDOW_LENGTH){
+                front_flag = flag;
+                front_start = start;
+                front_end = WINDOW_LENGTH;
+
+                back_flag = otherwindowFlag(flag);
+                back_start = 0;
+                back_end = end-WINDOW_LENGTH;
+            }
+
+            segment_index.put("peak_flag",flag);
+            segment_index.put("peak_sample",p);
+
+            segment_index.put("front_flag",front_flag);
+            segment_index.put("front_start", front_start);
+            segment_index.put("front_end", front_end);
+
+            segment_index.put("back_flag",back_flag);
+            segment_index.put("back_start", back_start);
+            segment_index.put("back_end", back_end);
+
+
+            Log.i("indexd",String.valueOf(front_flag));
+            Log.i("indexd",String.valueOf(front_start));
+            Log.i("indexd",String.valueOf(front_end));
+
+            Log.i("indexd",String.valueOf(back_flag));
+            Log.i("indexd",String.valueOf(back_start));
+            Log.i("indexd",String.valueOf(back_end));
+
+
+            Log.i("indexd_현재marker",String.valueOf(dataFlag));
+            Log.i("indexd_현재cnt",String.valueOf(windowCnt));
+            Log.i("indexd_현재flag",String.valueOf(windowFlag));
+
+            segmentIndexs.offer(segment_index);
 
         }
-        else if (start<0){
-            front_flag = otherwindowFlag(flag);
-            front_start = WINDOW_LENGTH + start;
-            front_end = WINDOW_LENGTH;
-
-            back_start = flag;
-            back_end = end;
-            back_flag = flag;
-
-
-        }
-        else if (end>WINDOW_LENGTH){
-            front_flag = flag;
-            front_start = start;
-            front_end = WINDOW_LENGTH;
-
-            back_flag = otherwindowFlag(flag);
-            back_start = 0;
-            back_end = end-WINDOW_LENGTH;
-        }
-
-        segment_index.put("peak_flag",flag);
-        segment_index.put("peak_sample",p);
-
-        segment_index.put("front_flag",front_flag);
-        segment_index.put("front_start", front_start);
-        segment_index.put("front_end", front_end);
-
-        segment_index.put("back_flag",back_flag);
-        segment_index.put("back_start", back_start);
-        segment_index.put("back_end", back_end);
-
-
-        Log.i("indexd",String.valueOf(front_flag));
-        Log.i("indexd",String.valueOf(front_start));
-        Log.i("indexd",String.valueOf(front_end));
-
-        Log.i("indexd",String.valueOf(back_flag));
-        Log.i("indexd",String.valueOf(back_start));
-        Log.i("indexd",String.valueOf(back_end));
-
-
-        Log.i("indexd_현재marker",String.valueOf(dataFlag));
-        Log.i("indexd_현재cnt",String.valueOf(windowCnt));
-        Log.i("indexd_현재flag",String.valueOf(windowFlag));
-
-        segmentIndexs.offer(segment_index);
-
-    }
 
     private void setSegment()  {
         Log.v(FUNCTION_TAG,"user:setSegment()");
