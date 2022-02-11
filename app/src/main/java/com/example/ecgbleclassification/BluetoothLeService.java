@@ -278,6 +278,7 @@ public class BluetoothLeService extends Service {
         Intent intent = new Intent("BLE");
 
         float[] parsingData = parsingStringCsvToFloatArray(data);
+<<<<<<< Updated upstream
         float[] filterData = baseLineRemoveButterFiltering(parsingData);
 
         intent.putExtra("BLE_DATA",filterData);
@@ -297,6 +298,25 @@ public class BluetoothLeService extends Service {
         System.arraycopy(parsingData,0,allData,0,parsingData.length);
         System.arraycopy(filterData,0,allData,parsingData.length,filterData.length);
         intent.putExtra("TestUse_filter",allData);
+=======
+
+        //segment용
+        /*
+        Log.i("배열체크",Arrays.toString(parsingData));
+        if(flag != 4){
+            System.arraycopy(parsingData,0,buffer,flag*parsingData.length,parsingData.length);
+            flag+=1;
+        }
+        if(flag==4){
+            flag = 0;
+            Log.i("배열체크","보냄");
+             intent.putExtra("BLE_DATA",buffer);
+            sendBroadcast(intent);
+        }
+         */
+
+        intent.putExtra("BLE_DATA",buffer);
+>>>>>>> Stashed changes
         sendBroadcast(intent);
 
     }
