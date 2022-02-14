@@ -26,6 +26,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
+import org.junit.platform.engine.UniqueId;
 import org.tensorflow.lite.Interpreter;
 
 import java.io.BufferedWriter;
@@ -44,14 +45,16 @@ import java.util.Map;
 import java.util.Queue;
 
 public class EcgProcess extends Service {
-    final String SERVICE_TAG = "ECG_SERVICE_CHECK";
+    final String FUNCTION_TAG = "FUNCTION_CHECK";
+    final String FORDEBUG_TAG = "FORDEBUG_TAG";
 
+    final String SERVICE_TAG = "ECG_SERVICE_CHECK";
     final String WINDOW_TAG = "WINDOW_CHECK";
     final String SEGMENTATION_TAG = "SEGMENT_CHECK";
     final String TENSORFLOW_TAG = "TENSORFLOW_CHECK";
-    final String FUNCTION_TAG = "FUNCTION_CHECK";
 
-    final String FORDEBUG_TAG = "FORDEBUG_TAG";
+
+
 
 
 
@@ -106,7 +109,7 @@ public class EcgProcess extends Service {
     int dataFlag;
 
     //threshold
-    static int thresholdSetCnt;
+    static int thresholdSetCnt=5;
     int thresholdMode;
     float thresholdValue;
     HashMap<String, Integer> thresholdStart;
@@ -193,22 +196,25 @@ public class EcgProcess extends Service {
                 super.onReceive(context, intent);
                 if(intent.getAction().equals("BLE")){
                     Log.i(BROADCAST_TAG,intent.getAction());
-                    setData(intent.getFloatArrayExtra("BLE_DATA"));
-                    //
-                    differSignalFiltering(10);
-                    squareSignalFiltering();
-                    averageSignalFiltering(50);
-                    //findThresholdUpDown();
-                    if (thresholdMode==1){
-                        findThresholdUpDown();
+                    Log.i(FORDEBUG_TAG,"dataFlag:"+String.valueOf(dataFlag));
+                    if(intent.getFloatArrayExtra("BLE_DATA")!=null){
+                        setData(intent.getFloatArrayExtra("BLE_DATA"));
+                        //
+                        differSignalFiltering(1);
+                        squareSignalFiltering();
+                        //averageSignalFiltering(50);
+                        //findThresholdUpDown();
+                        sendBleDataTestUse_preprocessing();
+                        if (thresholdMode==1){
+                            findThresholdUpDown();
+                        }
+                        updateDataFlag();
+                        if(thresholdMode==1){
+                            findPeak();
+                            setSegment();
+                        }
+                        switchWindow();
                     }
-                    updateDataFlag();
-                    if(thresholdMode==1){
-                        findPeak();
-                        setSegment();
-                    }
-                    switchWindow();
-
                 }
             }
         };
@@ -304,7 +310,7 @@ public class EcgProcess extends Service {
         Log.v(FUNCTION_TAG,"user:setData()");
         for(int i=0; i<DATA_LENGTH; i+=1){
             originalEcg[windowFlag][dataFlag+i] = data[i];
-            squareEcg[windowFlag][dataFlag+i] = data[i];
+            //squareEcg[windowFlag][dataFlag+i] = data[i];
         }
     }
 
@@ -318,7 +324,7 @@ public class EcgProcess extends Service {
         Log.v(FUNCTION_TAG,"user:switchWindow()");
         if(dataFlag==WINDOW_LENGTH){
             dataFlag=0;
-            if(windowCnt%thresholdSetCnt==0){
+            if((windowCnt == 0)||(windowCnt%thresholdSetCnt==0)){
                 setThresholdValue(SAMPLING_LATE*3);
             }
 
@@ -333,6 +339,7 @@ public class EcgProcess extends Service {
         }
     }
         private void setThresholdValue(int startIndex){
+            Log.v(FUNCTION_TAG,"user:setThresholdValue()");
                 float sum = 0;
                 int endIndex = squareEcg[windowFlag].length;
                 for(int i =startIndex; i< endIndex; i++){
@@ -344,27 +351,37 @@ public class EcgProcess extends Service {
 
 
     private void differSignalFiltering(int length){
+        Log.v(FUNCTION_TAG,"user:differSignalFiltering()");
         if (checkWindowCntIndexExcess(length)) {
-            int frontN =(dataFlag - length)*(-1);
-            int backN = length-frontN;
+            int N = (dataFlag - length)*(-1);
 
+            int frontN = WINDOW_LENGTH-N;
             HashMap<String,Integer> frontStart = new HashMap();
             frontStart.put("windowFlag",otherwindowFlag(windowFlag));
-            frontStart.put("dataFlag",WINDOW_LENGTH + frontN);
+            frontStart.put("dataFlag", frontN);
 
+            Log.i(FORDEBUG_TAG,"frontWindow:"+ String.valueOf(frontStart.get("windowFlag")));
+            Log.i(FORDEBUG_TAG,"frontFlag:"+ String.valueOf(frontStart.get("dataFlag")));
+
+            int backN = dataFlag + DATA_LENGTH;
             HashMap<String,Integer> backStart = new HashMap();
-            frontStart.put("windowFlag",windowFlag);
-            frontStart.put("dataFlag",backN);
+            backStart.put("windowFlag",windowFlag);
+            backStart.put("dataFlag",backN);
 
-            float[] originalArray = new float[frontN+length];
-            float[] caculateArray = new float[length];
+            Log.i(FORDEBUG_TAG,"backWindow:"+ String.valueOf(backStart.get("windowFlag")));
+            Log.i(FORDEBUG_TAG,"backFlag:"+ String.valueOf(backStart.get("dataFlag")));
 
-            System.arraycopy(originalEcg[frontStart.get("windowFlag")],frontStart.get("dataFlag"),originalArray,0,frontN);
-            System.arraycopy(originalEcg[backStart.get("windowFlag")],backStart.get("dataFlag"),originalArray,frontN,backN);
+            float[] originalArray = new float[DATA_LENGTH+length];
+            float[] caculateArray = new float[DATA_LENGTH];
+
+            System.arraycopy(originalEcg[frontStart.get("windowFlag")],frontStart.get("dataFlag"),originalArray,0,N);
+            System.arraycopy(originalEcg[backStart.get("windowFlag")],dataFlag,originalArray,N,DATA_LENGTH);
+            Log.i(FORDEBUG_TAG,"originalArrayFirst:"+ String.valueOf(N));
+            Log.i(FORDEBUG_TAG,"originalArraySecond:"+ String.valueOf(originalArray.length));
 
             for(int i=0; i<length; i++){
                 int flag = i+length;
-                caculateArray[i] = originalArray[flag] -originalArray[flag-length] ;
+                caculateArray[i] = originalArray[flag] - originalArray[flag-length] ;
             }
 
             System.arraycopy(caculateArray,0,squareEcg[windowFlag],dataFlag,DATA_LENGTH);
@@ -381,6 +398,7 @@ public class EcgProcess extends Service {
 
 
     private void squareSignalFiltering(){
+        Log.v(FUNCTION_TAG,"squareSignalFiltering()");
         for(int i=dataFlag; i< dataFlag+DATA_LENGTH; i++){
             squareEcg[windowFlag][i] =  (float)Math.pow(squareEcg[windowFlag][i],2);
         }
@@ -388,6 +406,7 @@ public class EcgProcess extends Service {
 
 
     private void averageSignalFiltering(int length){
+        Log.v(FUNCTION_TAG,"averageSignalFiltering()");
         if (checkWindowCntIndexExcess(length)) {
             int frontN =(dataFlag - length)*(-1);
             int backN = length-frontN;
@@ -431,10 +450,13 @@ public class EcgProcess extends Service {
 
 
         private boolean checkWindowCntIndexExcess(int cnt){
-            if(-cnt<0){
+            Log.v(FUNCTION_TAG,"user:checkWindowCntIndexExcess()");
+            if(dataFlag-cnt<0){
+                Log.i(FORDEBUG_TAG,"TRUE");
                 return true;
             }
             else{
+                Log.i(FORDEBUG_TAG,"FALSE");
                 return false;
             }
         }
@@ -442,13 +464,13 @@ public class EcgProcess extends Service {
 
 
     private void findThresholdUpDown(){
-
+        Log.v(FUNCTION_TAG,"user:findThresholdUpDown()");
         for(int i=dataFlag; i<DATA_LENGTH; i+=1){
             float data = originalEcg[windowFlag][i];
             if(thresholdStart == null){
                 if(data>thresholdValue){
                     Log.i(SEGMENTATION_TAG,"threshold_start:"+String.valueOf(dataFlag+i));
-                    thresholdStart = new HashMap<>();
+                     thresholdStart = new HashMap<>();
                     thresholdStart.put("window",windowFlag);
                     thresholdStart.put("sample",dataFlag+i);
                     Log.i(SEGMENTATION_TAG,"threshold_realvaue:"+String.valueOf(data));
@@ -855,7 +877,6 @@ public class EcgProcess extends Service {
             cnt[0] = windowCnt-1;
             cnt[1] = windowCnt;
         }
-        Log.i(FORDEBUG_TAG,cnt.toString());
         return cnt;
     }
 
@@ -948,6 +969,19 @@ public class EcgProcess extends Service {
         out.flush();
         Log.i(SEGMENTATION_TAG,"WRTIE FILE");
         out.close();
+
+    }
+
+    private void sendBleDataTestUse_preprocessing(){
+        Intent intent = new Intent("BLE");
+
+
+        float[] allData = new float[DATA_LENGTH*2];
+        //복붙!!
+        System.arraycopy(originalEcg[windowFlag],dataFlag,allData,0,DATA_LENGTH);
+        System.arraycopy(squareEcg[windowFlag],dataFlag,allData,DATA_LENGTH,DATA_LENGTH);
+        intent.putExtra("TestUse_preprocessing",allData);
+        sendBroadcast(intent);
 
     }
 

@@ -84,9 +84,16 @@ public class FragmentAllplot extends Fragment {
             public void onReceive(Context context, Intent intent) {
                 super.onReceive(context, intent);
                 if(intent.getAction().equals("BLE")){
-                    //Log.i(BROADCAST_TAG,intent.getAction());
-                    //plot(intent.getFloatArrayExtra("BLE_DATA"));
-                    plotTestUse_filter(intent.getFloatArrayExtra("TestUse_filter"));
+
+                    if(intent.getFloatArrayExtra("TestUse_preprocessing")!=null){
+                        plotTestUse_filter(intent.getFloatArrayExtra("TestUse_preprocessing"));
+                    }
+                     /*
+                    if(intent.getFloatArrayExtra("BLE_DATA")!=null){
+                        plot(intent.getFloatArrayExtra("BLE_DATA"));
+                    }
+                      */
+
                 }
                 if(intent.getAction().equals("INFORMATION")){
                     Log.i(BROADCAST_TAG,intent.getAction());

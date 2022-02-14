@@ -253,8 +253,8 @@ public class BluetoothLeService extends Service {
             Log.i(GATT_TAG,"GATT DATA NOTIFY");
 
             byte[] data = characteristic.getValue();
-            //sendBleData(data);
-            sendBleDataTestUse_filter(data);
+            sendBleData(data);
+            //sendBleDataTestUse_filter(data);
         }
 
 
@@ -280,7 +280,7 @@ public class BluetoothLeService extends Service {
         float[] parsingData = parsingStringCsvToFloatArray(data);
         float[] filterData = baseLineRemoveButterFiltering(parsingData);
 
-        intent.putExtra("BLE_DATA",filterData);
+        intent.putExtra("BLE_DATA",parsingData);
         sendBroadcast(intent);
 
     }
