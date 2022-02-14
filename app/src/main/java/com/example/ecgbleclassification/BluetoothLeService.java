@@ -107,9 +107,11 @@ public class BluetoothLeService extends Service {
         manager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = manager.getAdapter();
 
-        chebyshevIFilter.highPass(3    ,400,3,3);
-        butterworthLowPassFilter.lowPass(21,400,40);
-        butterworthHightPassFilter.highPass(3,400,3);
+        //chebyshevIFilter.highPass(2    ,400,3,3);
+        chebyshevIFilter.bandPass(2,400,21,19,3);
+
+        butterworthLowPassFilter.lowPass(3,400,40);
+        butterworthHightPassFilter.highPass(2,400,0.5);
 
 
         //계속 켜지게
@@ -277,8 +279,9 @@ public class BluetoothLeService extends Service {
     private void sendBleData(byte[] data){
         Intent intent = new Intent("BLE");
 
-        float[] parsingData = parsingStringCsvToFloatArray(data);
-        float[] filterData = baseLineRemoveButterFiltering(parsingData);
+        float[] parsingData = parsingByteArrayToFloatArray(data);
+        //float[] parsingData = parsingStringCsvToFloatArray(data);
+        float[] filterData = baseLineRemoveFiltering(parsingData);
 
         intent.putExtra("BLE_DATA",parsingData);
         sendBroadcast(intent);
@@ -289,7 +292,7 @@ public class BluetoothLeService extends Service {
         Intent intent = new Intent("BLE");
 
         float[] parsingData = parsingByteArrayToFloatArray(data);
-        float[] filterData = baseLineRemoveButterFiltering(parsingData);
+        float[] filterData = baseLineRemoveFiltering(parsingData);
 
 
         float[] allData = new float[parsingData.length*2];
@@ -301,6 +304,7 @@ public class BluetoothLeService extends Service {
 
     }
 
+
     private float[] parsingByteArrayToFloatArray(byte[] data){
         float[] parsingData = new float[data.length];
 
@@ -309,7 +313,6 @@ public class BluetoothLeService extends Service {
         }
         return parsingData;
     }
-
 
     private float[] parsingStringCsvToFloatArray(byte[] data){
         String segmentStringEcg = new String(data);
@@ -324,7 +327,7 @@ public class BluetoothLeService extends Service {
 
 
 
-    private float[] baseLineRemoveButterFiltering(float[] data){
+    private float[] baseLineRemoveFiltering(float[] data){
         Log.i("baselineRemove","check");
         double[] doubleData = new double[data.length];
         IntStream.range(0, data.length).forEach(index -> doubleData[index] = data[index]);
@@ -333,8 +336,9 @@ public class BluetoothLeService extends Service {
         float[] floatData = new float[data.length];
         for(int i=0; i<doubleData.length; i++){
             filterData[i] = doubleData[i];
+            filterData[i] = butterworthHightPassFilter.filter(filterData[i]);
             filterData[i] = butterworthLowPassFilter.filter(filterData[i]);
-            filterData[i] = chebyshevIFilter.filter(filterData[i]);
+            //filterData[i] = chebyshevIFilter.filter(filterData[i]);
             floatData[i] = (float) filterData[i];
 
 
