@@ -11,6 +11,7 @@ import android.content.res.AssetFileDescriptor;
 import android.content.res.Resources;
 import android.os.Binder;
 import android.os.Build;
+import android.os.Debug;
 import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
@@ -104,6 +105,7 @@ public class EcgProcess extends Service {
     int windowCnt;
     float[][] originalEcg;
     float[][] squareEcg;
+    float[][] processingEcg;
 
     int windowFlag;
     int dataFlag;
@@ -154,6 +156,7 @@ public class EcgProcess extends Service {
         //ecg save 
         originalEcg = new float[2][WINDOW_LENGTH];
         squareEcg = new float[2][WINDOW_LENGTH];
+        processingEcg = new float[2][WINDOW_LENGTH];
 
         dataFlag = 0;
         windowCnt = 0;
@@ -200,9 +203,9 @@ public class EcgProcess extends Service {
                     if(intent.getFloatArrayExtra("BLE_DATA")!=null){
                         setData(intent.getFloatArrayExtra("BLE_DATA"));
                         //
-                        differSignalFiltering(1);
+                        differSignalFiltering();
                         squareSignalFiltering();
-                        //averageSignalFiltering(50);
+                        averageSignalFiltering();
                         //findThresholdUpDown();
                         sendBleDataTestUse_preprocessing();
                         if (thresholdMode==1){
@@ -310,7 +313,7 @@ public class EcgProcess extends Service {
         Log.v(FUNCTION_TAG,"user:setData()");
         for(int i=0; i<DATA_LENGTH; i+=1){
             originalEcg[windowFlag][dataFlag+i] = data[i];
-            //squareEcg[windowFlag][dataFlag+i] = data[i];
+            squareEcg[windowFlag][dataFlag+i] = data[i];
         }
     }
 
@@ -350,88 +353,55 @@ public class EcgProcess extends Service {
         }
 
 
-    private void differSignalFiltering(int length){
+    private void differSignalFiltering(){
+        int DIFF_N = 1;
         Log.v(FUNCTION_TAG,"user:differSignalFiltering()");
-        if (checkWindowCntIndexExcess(length)) {
-            int N = (dataFlag - length)*(-1);
+        if (checkWindowCntIndexExcess(DIFF_N)) {
+            float[] originalArray = getPreviousWindowValue(DIFF_N);
 
-            int frontN = WINDOW_LENGTH-N;
-            HashMap<String,Integer> frontStart = new HashMap();
-            frontStart.put("windowFlag",otherwindowFlag(windowFlag));
-            frontStart.put("dataFlag", frontN);
-
-            Log.i(FORDEBUG_TAG,"frontWindow:"+ String.valueOf(frontStart.get("windowFlag")));
-            Log.i(FORDEBUG_TAG,"frontFlag:"+ String.valueOf(frontStart.get("dataFlag")));
-
-            int backN = dataFlag + DATA_LENGTH;
-            HashMap<String,Integer> backStart = new HashMap();
-            backStart.put("windowFlag",windowFlag);
-            backStart.put("dataFlag",backN);
-
-            Log.i(FORDEBUG_TAG,"backWindow:"+ String.valueOf(backStart.get("windowFlag")));
-            Log.i(FORDEBUG_TAG,"backFlag:"+ String.valueOf(backStart.get("dataFlag")));
-
-            float[] originalArray = new float[DATA_LENGTH+length];
             float[] caculateArray = new float[DATA_LENGTH];
-
-            System.arraycopy(originalEcg[frontStart.get("windowFlag")],frontStart.get("dataFlag"),originalArray,0,N);
-            System.arraycopy(originalEcg[backStart.get("windowFlag")],dataFlag,originalArray,N,DATA_LENGTH);
-            Log.i(FORDEBUG_TAG,"originalArrayFirst:"+ String.valueOf(N));
-            Log.i(FORDEBUG_TAG,"originalArraySecond:"+ String.valueOf(originalArray.length));
-
-            for(int i=0; i<length; i++){
-                int flag = i+length;
-                caculateArray[i] = originalArray[flag] - originalArray[flag-length] ;
+            for(int i=0; i<DATA_LENGTH; i++){
+                caculateArray[i] = originalArray[i+DIFF_N]-originalArray[i];
             }
 
             System.arraycopy(caculateArray,0,squareEcg[windowFlag],dataFlag,DATA_LENGTH);
         }
         else{
             for(int i=dataFlag; i< dataFlag+DATA_LENGTH; i++){
-                squareEcg[windowFlag][i] =originalEcg[windowFlag][dataFlag]-originalEcg[windowFlag][i-length];
+                squareEcg[windowFlag][i] =originalEcg[windowFlag][i]-originalEcg[windowFlag][i-3];
             }
 
         }
-
-
     }
+
 
 
     private void squareSignalFiltering(){
         Log.v(FUNCTION_TAG,"squareSignalFiltering()");
         for(int i=dataFlag; i< dataFlag+DATA_LENGTH; i++){
-            squareEcg[windowFlag][i] =  (float)Math.pow(squareEcg[windowFlag][i],2);
+            Log.i(FORDEBUG_TAG,String.valueOf(i));
+            Log.i(FORDEBUG_TAG,String.valueOf(squareEcg[windowFlag][i]));
+            //squareEcg[windowFlag][i] =  (float)Math.pow(squareEcg[windowFlag][i],2);
+            squareEcg[windowFlag][i] =  Math.abs(squareEcg[windowFlag][i])*2;
+            Log.i(FORDEBUG_TAG,String.valueOf(squareEcg[windowFlag][i]));
         }
     }
 
 
-    private void averageSignalFiltering(int length){
+    private void averageSignalFiltering(){
         Log.v(FUNCTION_TAG,"averageSignalFiltering()");
-        if (checkWindowCntIndexExcess(length)) {
-            int frontN =(dataFlag - length)*(-1);
-            int backN = length-frontN;
+        int N = 25;
+        if (checkWindowCntIndexExcess(N)) {
+            float[] originalArray = getPreviousWindowValue(N);
 
-            HashMap<String,Integer> frontStart = new HashMap();
-            frontStart.put("windowFlag",otherwindowFlag(windowFlag));
-            frontStart.put("dataFlag",WINDOW_LENGTH + frontN);
-
-            HashMap<String,Integer> backStart = new HashMap();
-            frontStart.put("windowFlag",windowFlag);
-            frontStart.put("dataFlag",backN);
-
-            float[] originalArray = new float[frontN+length];
-            float[] caculateArray = new float[length];
-
-            System.arraycopy(originalEcg[frontStart.get("windowFlag")],frontStart.get("dataFlag"),originalArray,0,frontN);
-            System.arraycopy(originalEcg[backStart.get("windowFlag")],backStart.get("dataFlag"),originalArray,frontN,backN);
-
-            for(int i=0; i<length; i++){
-                int flag = i+length;
+            float[] caculateArray = new float[DATA_LENGTH];
+            for(int i=0; i<N; i++){
+                int flag = i+N;
                 float sum = 0;
-                for(int j =flag-length; j<=flag; j++){
+                for(int j =flag-N; j<=flag; j++){
                     sum += originalArray[j];
                 }
-                caculateArray[i] = sum / (length+1);
+                caculateArray[i] = sum / (N+1);
             }
 
             System.arraycopy(caculateArray,0,squareEcg[windowFlag],dataFlag,DATA_LENGTH);
@@ -439,14 +409,15 @@ public class EcgProcess extends Service {
         else{
             for(int i=dataFlag; i< dataFlag+DATA_LENGTH; i++){
                 float sum = 0;
-                for(int j = i-length; j<=i; j++){
-                    sum += originalEcg[windowFlag][j];
+                for(int j = i-N; j<=i; j++){
+                    sum += squareEcg[windowFlag][j];
                 }
-                squareEcg[windowFlag][i] = sum/(length+1);
+                processingEcg[windowFlag][i] = sum/(N/2);
             }
 
         }
     }
+
 
 
         private boolean checkWindowCntIndexExcess(int cnt){
@@ -459,6 +430,31 @@ public class EcgProcess extends Service {
                 Log.i(FORDEBUG_TAG,"FALSE");
                 return false;
             }
+        }
+
+        private float[] getPreviousWindowValue(int length){
+            int N = (dataFlag - length)*(-1);
+
+            int frontN = WINDOW_LENGTH-N;
+            HashMap<String,Integer> frontStart = new HashMap();
+            frontStart.put("windowFlag",otherwindowFlag(windowFlag));
+            frontStart.put("dataFlag", frontN);
+
+            Log.i(FORDEBUG_TAG,"frontWindow:"+ String.valueOf(frontStart.get("windowFlag")));
+            Log.i(FORDEBUG_TAG,"frontFlag:"+ String.valueOf(frontStart.get("dataFlag")));
+
+
+
+            float[] originalArray = new float[DATA_LENGTH+length];
+
+            System.arraycopy(squareEcg[frontStart.get("windowFlag")],frontStart.get("dataFlag"),originalArray,0,N);
+            System.arraycopy(squareEcg[windowFlag],dataFlag,originalArray,N,DATA_LENGTH);
+
+            Log.i(FORDEBUG_TAG,"originalArrayFirst:"+ String.valueOf(N));
+            Log.i(FORDEBUG_TAG,"originalArraySecond:"+ String.valueOf(originalArray.length));
+
+
+            return originalArray;
         }
 
 
@@ -979,7 +975,7 @@ public class EcgProcess extends Service {
         float[] allData = new float[DATA_LENGTH*2];
         //복붙!!
         System.arraycopy(originalEcg[windowFlag],dataFlag,allData,0,DATA_LENGTH);
-        System.arraycopy(squareEcg[windowFlag],dataFlag,allData,DATA_LENGTH,DATA_LENGTH);
+        System.arraycopy(processingEcg[windowFlag],dataFlag,allData,DATA_LENGTH,DATA_LENGTH);
         intent.putExtra("TestUse_preprocessing",allData);
         sendBroadcast(intent);
 

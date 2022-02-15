@@ -72,10 +72,6 @@ public class BluetoothLeService extends Service {
 
 
 
-
-
-
-
     public BluetoothLeService() {
 
     }
@@ -279,11 +275,11 @@ public class BluetoothLeService extends Service {
     private void sendBleData(byte[] data){
         Intent intent = new Intent("BLE");
 
-        float[] parsingData = parsingByteArrayToFloatArray(data);
+        float[] parsingData = parsingStringCsvToFloatArray(data);
         //float[] parsingData = parsingStringCsvToFloatArray(data);
         float[] filterData = baseLineRemoveFiltering(parsingData);
 
-        intent.putExtra("BLE_DATA",parsingData);
+        intent.putExtra("BLE_DATA",filterData);
         sendBroadcast(intent);
 
     }
@@ -337,6 +333,7 @@ public class BluetoothLeService extends Service {
         for(int i=0; i<doubleData.length; i++){
             filterData[i] = doubleData[i];
             filterData[i] = butterworthHightPassFilter.filter(filterData[i]);
+            filterData[i] = butterworthLowPassFilter.filter(filterData[i]);
             filterData[i] = butterworthLowPassFilter.filter(filterData[i]);
             //filterData[i] = chebyshevIFilter.filter(filterData[i]);
             floatData[i] = (float) filterData[i];
