@@ -15,6 +15,7 @@ import android.os.Debug;
 import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.Window;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
@@ -102,23 +103,23 @@ public class EcgProcess extends Service {
     
 
     //ecg data(window)
-    int windowCnt;
-    float[][] originalEcg;
-    float[][] squareEcg;
-    float[][] processingEcg;
 
-    int windowFlag;
+    float[] originalEcg;
+    float[] squareEcg;
+    float[] processingEcg;
     int dataFlag;
+    int windowCnt;
 
     //threshold
-    static int thresholdSetCnt=5;
+    static int THRESHOLD_SET_CNT=5;
     int thresholdMode;
     float thresholdValue;
-    HashMap<String, Integer> thresholdStart;
-    HashMap<String, Integer> thresholdEnd;
+    int thresholdStart;
+    int thresholdEnd;
 
     //segment_index
-    Queue<HashMap<String,Integer>> segmentIndexs = new LinkedList<>();
+    Queue<int[]> segmentPeakQueue = new LinkedList<>();
+    Queue<HashMap<String,int[]>> segmentIndexQueue = new LinkedList<>();
 
     //BPM
     int prevRpeak;
@@ -154,18 +155,19 @@ public class EcgProcess extends Service {
         SEGMENT_LENGTH = res.getInteger(R.integer.segment_length);
 
         //ecg save 
-        originalEcg = new float[2][WINDOW_LENGTH];
-        squareEcg = new float[2][WINDOW_LENGTH];
-        processingEcg = new float[2][WINDOW_LENGTH];
+        originalEcg = new float[WINDOW_LENGTH];
+        squareEcg = new float[WINDOW_LENGTH];
+        processingEcg = new float[WINDOW_LENGTH];
 
         dataFlag = 0;
         windowCnt = 0;
-        windowFlag = 0;
 
 
         //threshold
         thresholdMode = -1;
         thresholdValue = 0;
+        thresholdStart = -1;
+        thresholdEnd = -1;
 
         prevRpeak = 0;
 
@@ -213,8 +215,7 @@ public class EcgProcess extends Service {
                         }
                         updateDataFlag();
                         if(thresholdMode==1){
-                            findPeak();
-                            setSegment();
+                            getSegment();
                         }
                         switchWindow();
                     }
@@ -312,8 +313,8 @@ public class EcgProcess extends Service {
     private void setData(float[] data){
         Log.v(FUNCTION_TAG,"user:setData()");
         for(int i=0; i<DATA_LENGTH; i+=1){
-            originalEcg[windowFlag][dataFlag+i] = data[i];
-            squareEcg[windowFlag][dataFlag+i] = data[i];
+            originalEcg[dataFlag+i] = data[i];
+            squareEcg[dataFlag+i] = data[i];
         }
     }
 
@@ -327,36 +328,46 @@ public class EcgProcess extends Service {
         Log.v(FUNCTION_TAG,"user:switchWindow()");
         if(dataFlag==WINDOW_LENGTH){
             dataFlag=0;
-            if((windowCnt == 0)||(windowCnt%thresholdSetCnt==0)){
+            if((windowCnt == 0) || (windowCnt%THRESHOLD_SET_CNT==0)){
                 setThresholdValue(SAMPLING_LATE*3);
             }
-
             try {
-                saveLocalWindow(windowFlag,windowCnt);
+                saveLocalWindow(windowCnt);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
-            windowFlag = otherwindowFlag(windowFlag);
             windowCnt+=1;
         }
     }
         private void setThresholdValue(int startIndex){
             Log.v(FUNCTION_TAG,"user:setThresholdValue()");
                 float sum = 0;
-                int endIndex = squareEcg[windowFlag].length;
+                int endIndex = squareEcg.length;
                 for(int i =startIndex; i< endIndex; i++){
-                    sum += squareEcg[windowFlag][i];
+                    sum += squareEcg[i];
                 }
                 thresholdValue = sum / (endIndex-startIndex);
                 thresholdMode = 1 ;
         }
+        public void saveLocalWindow(int cnt) throws IOException {
+            Log.v(FUNCTION_TAG,"user:saveLocalWindow()");
+            File f = new File(windowFile,String.valueOf(cnt)+".csv");
+            BufferedWriter out = new BufferedWriter(new FileWriter(f,true));
+
+            StringBuilder sb = new StringBuilder();
+            for (float s : originalEcg) {
+                sb.append(String.valueOf(s)).append(",");
+            }
+            out.write(sb.toString());
+            out.flush();
+        }
+
 
 
     private void differSignalFiltering(){
         int DIFF_N = 1;
         Log.v(FUNCTION_TAG,"user:differSignalFiltering()");
-        if (checkWindowCntIndexExcess(DIFF_N)) {
+        if (checkPreprocessingExcess(DIFF_N)) {
             float[] originalArray = getPreviousWindowValue(DIFF_N);
 
             float[] caculateArray = new float[DATA_LENGTH];
@@ -364,11 +375,11 @@ public class EcgProcess extends Service {
                 caculateArray[i] = originalArray[i+DIFF_N]-originalArray[i];
             }
 
-            System.arraycopy(caculateArray,0,squareEcg[windowFlag],dataFlag,DATA_LENGTH);
+            System.arraycopy(caculateArray,0,squareEcg,dataFlag,DATA_LENGTH);
         }
         else{
             for(int i=dataFlag; i< dataFlag+DATA_LENGTH; i++){
-                squareEcg[windowFlag][i] =originalEcg[windowFlag][i]-originalEcg[windowFlag][i-3];
+                squareEcg[i] =originalEcg[i]-originalEcg[i-DIFF_N];
             }
 
         }
@@ -380,10 +391,10 @@ public class EcgProcess extends Service {
         Log.v(FUNCTION_TAG,"squareSignalFiltering()");
         for(int i=dataFlag; i< dataFlag+DATA_LENGTH; i++){
             Log.i(FORDEBUG_TAG,String.valueOf(i));
-            Log.i(FORDEBUG_TAG,String.valueOf(squareEcg[windowFlag][i]));
+            Log.i(FORDEBUG_TAG,String.valueOf(squareEcg[i]));
             //squareEcg[windowFlag][i] =  (float)Math.pow(squareEcg[windowFlag][i],2);
-            squareEcg[windowFlag][i] =  Math.abs(squareEcg[windowFlag][i])*2;
-            Log.i(FORDEBUG_TAG,String.valueOf(squareEcg[windowFlag][i]));
+            squareEcg[i] =  Math.abs(squareEcg[i])*2;
+            Log.i(FORDEBUG_TAG,String.valueOf(squareEcg[i]));
         }
     }
 
@@ -391,7 +402,7 @@ public class EcgProcess extends Service {
     private void averageSignalFiltering(){
         Log.v(FUNCTION_TAG,"averageSignalFiltering()");
         int N = 25;
-        if (checkWindowCntIndexExcess(N)) {
+        if (checkPreprocessingExcess(N)) {
             float[] originalArray = getPreviousWindowValue(N);
 
             float[] caculateArray = new float[DATA_LENGTH];
@@ -404,23 +415,23 @@ public class EcgProcess extends Service {
                 caculateArray[i] = sum / (N+1);
             }
 
-            System.arraycopy(caculateArray,0,squareEcg[windowFlag],dataFlag,DATA_LENGTH);
+            System.arraycopy(caculateArray,0,squareEcg,dataFlag,DATA_LENGTH);
         }
         else{
             for(int i=dataFlag; i< dataFlag+DATA_LENGTH; i++){
                 float sum = 0;
                 for(int j = i-N; j<=i; j++){
-                    sum += squareEcg[windowFlag][j];
+                    sum += squareEcg[j];
                 }
-                processingEcg[windowFlag][i] = sum/(N/2);
+                processingEcg[i] = sum/(N/2);
             }
 
         }
     }
 
 
-
-        private boolean checkWindowCntIndexExcess(int cnt){
+        //함수 이름 변경
+        private boolean checkPreprocessingExcess(int cnt){
             Log.v(FUNCTION_TAG,"user:checkWindowCntIndexExcess()");
             if(dataFlag-cnt<0){
                 Log.i(FORDEBUG_TAG,"TRUE");
@@ -436,19 +447,12 @@ public class EcgProcess extends Service {
             int N = (dataFlag - length)*(-1);
 
             int frontN = WINDOW_LENGTH-N;
-            HashMap<String,Integer> frontStart = new HashMap();
-            frontStart.put("windowFlag",otherwindowFlag(windowFlag));
-            frontStart.put("dataFlag", frontN);
-
-            Log.i(FORDEBUG_TAG,"frontWindow:"+ String.valueOf(frontStart.get("windowFlag")));
-            Log.i(FORDEBUG_TAG,"frontFlag:"+ String.valueOf(frontStart.get("dataFlag")));
-
 
 
             float[] originalArray = new float[DATA_LENGTH+length];
 
-            System.arraycopy(squareEcg[frontStart.get("windowFlag")],frontStart.get("dataFlag"),originalArray,0,N);
-            System.arraycopy(squareEcg[windowFlag],dataFlag,originalArray,N,DATA_LENGTH);
+            System.arraycopy(squareEcg,frontN,originalArray,0,N);
+            System.arraycopy(squareEcg,dataFlag,originalArray,N,DATA_LENGTH);
 
             Log.i(FORDEBUG_TAG,"originalArrayFirst:"+ String.valueOf(N));
             Log.i(FORDEBUG_TAG,"originalArraySecond:"+ String.valueOf(originalArray.length));
@@ -462,230 +466,395 @@ public class EcgProcess extends Service {
     private void findThresholdUpDown(){
         Log.v(FUNCTION_TAG,"user:findThresholdUpDown()");
         for(int i=dataFlag; i<DATA_LENGTH; i+=1){
-            float data = originalEcg[windowFlag][i];
-            if(thresholdStart == null){
+            float data = originalEcg[i];
+            if(thresholdStart != -1){
                 if(data>thresholdValue){
                     Log.i(SEGMENTATION_TAG,"threshold_start:"+String.valueOf(dataFlag+i));
-                     thresholdStart = new HashMap<>();
-                    thresholdStart.put("window",windowFlag);
-                    thresholdStart.put("sample",dataFlag+i);
+                    thresholdStart=dataFlag+i;
                     Log.i(SEGMENTATION_TAG,"threshold_realvaue:"+String.valueOf(data));
                 }
             }
-            else if(thresholdEnd == null){
+            else if(thresholdEnd != -1){
                 if(data<thresholdValue){
                     Log.i(SEGMENTATION_TAG,"threshold_end:"+String.valueOf(dataFlag+i));
-                    thresholdEnd = new HashMap<>();
-                    thresholdEnd.put("window",windowFlag);
-                    thresholdEnd.put("sample",dataFlag+i);
+                    thresholdEnd=dataFlag+i;
                     Log.i(SEGMENTATION_TAG,"threshold_realvaue:"+String.valueOf(data));
-                }
-            }
-        }
-    }
-
-
-
-
-
-    private void findPeak() {
-        Log.v(FUNCTION_TAG,"user:findPeak()");
-        HashMap<String, Integer> peak_index;
-        peak_index = new HashMap<>();
-
-        float tmp_value = -1;
-        if (thresholdStart != null && thresholdEnd != null) {
-            int start_flag = thresholdStart.get("window");
-            int end_flag = thresholdEnd.get("window");
-
-            int start_sample = thresholdStart.get("sample");
-            int end_sample = thresholdEnd.get("sample");
-
-            if (start_flag == end_flag) {
-                int flag = start_flag;
-                for (int i = start_sample; i <= end_sample; i++) {
-                    if (squareEcg[flag][i] > tmp_value) {
-                        peak_index.put("sample", i);
-                        tmp_value = squareEcg[flag][i];
-                    }
-                }
-                peak_index.put("window", flag);
-            } else {
-                peak_index = new HashMap<>();
-                for (int i = start_sample; i < WINDOW_LENGTH; i++) {
-                    if (squareEcg[start_flag][i] > tmp_value) {
-                        peak_index.put("sample", i);
-                    }
-                    peak_index.put("window", start_flag);
-                }
-                for (int i = 0; i < end_sample; i++) {
-                    if (squareEcg[end_flag][i] > tmp_value) {
-                        peak_index.put("sample", i);
-                        peak_index.put("window", end_flag);
-                    }
-                }
-
-            }
-            Log.i(SEGMENTATION_TAG,"PEAK!");
-            setSegmentIndex(peak_index);
-            thresholdStart = null;
-            thresholdEnd = null;
-
-        }
-    }
-
-
-        private void setSegmentIndex(HashMap<String,Integer> peak_index){
-            Log.v(FUNCTION_TAG,"user:setSegmentIndex()");
-            int p = peak_index.get("sample");
-            int start = p - SEGMENT_LENGTH;
-            int end = p  + SEGMENT_LENGTH;
-
-            int front_start = 0;
-            int front_end = 0;
-            int front_flag = 0;
-
-            int back_start = 0;
-            int back_end = 0;
-            int back_flag = 0;
-
-            int flag = peak_index.get("window");
-            HashMap<String,Integer> segment_index = new HashMap<String,Integer>();
-
-            if((start > 0) && (end < WINDOW_LENGTH)){
-                front_start = start;
-                front_end = p;
-                front_flag = peak_index.get("window");
-
-                back_start = p;
-                back_end = end;
-                back_flag = peak_index.get("window");
-
-            }
-            else if (start<0){
-                front_flag = otherwindowFlag(flag);
-                front_start = WINDOW_LENGTH + start;
-                front_end = WINDOW_LENGTH;
-
-                back_start = flag;
-                back_end = end;
-                back_flag = flag;
-
-
-            }
-            else if (end>WINDOW_LENGTH){
-                front_flag = flag;
-                front_start = start;
-                front_end = WINDOW_LENGTH;
-
-                back_flag = otherwindowFlag(flag);
-                back_start = 0;
-                back_end = end-WINDOW_LENGTH;
-            }
-
-            segment_index.put("peak_flag",flag);
-            segment_index.put("peak_sample",p);
-
-            segment_index.put("front_flag",front_flag);
-            segment_index.put("front_start", front_start);
-            segment_index.put("front_end", front_end);
-
-            segment_index.put("back_flag",back_flag);
-            segment_index.put("back_start", back_start);
-            segment_index.put("back_end", back_end);
-
-
-            Log.i("indexd",String.valueOf(front_flag));
-            Log.i("indexd",String.valueOf(front_start));
-            Log.i("indexd",String.valueOf(front_end));
-
-            Log.i("indexd",String.valueOf(back_flag));
-            Log.i("indexd",String.valueOf(back_start));
-            Log.i("indexd",String.valueOf(back_end));
-
-
-            Log.i("indexd_현재marker",String.valueOf(dataFlag));
-            Log.i("indexd_현재cnt",String.valueOf(windowCnt));
-            Log.i("indexd_현재flag",String.valueOf(windowFlag));
-
-            segmentIndexs.offer(segment_index);
-
-        }
-
-    private void setSegment()  {
-        Log.v(FUNCTION_TAG,"user:setSegment()");
-       //Log.i(SEGMENTATION_TAG,String.valueOf(segmentIndexs.size()));
-        while(!segmentIndexs.isEmpty()){
-            //Log.i(SEGMENTATION_TAG,String.valueOf(segmentIndexs.isEmpty()));
-            //Log.i(SEGMENTATION_TAG,"Queue:"+String.valueOf(segmentIndexs.size()));
-            HashMap<String,Integer> index = segmentIndexs.peek();
-            if(index.get("back_flag")==windowFlag){
-                //Log.i("indexd","f "+String.valueOf(index.get("back_end")));
-                //Log.i("indexd","o "+String.valueOf(dataFlag));
-                Log.i("indexd_length",String.valueOf(segmentIndexs.size()));
-                if(index.get("back_end")<dataFlag){
-                    Log.i("indexd","sliceslicslicslice");
-
-
-                    float[] frontEcg = Arrays.copyOfRange(originalEcg[index.get("front_flag")],
-                            index.get("front_start"),
-                            index.get("front_end"));
-                    float[] backEcg = Arrays.copyOfRange(originalEcg[index.get("back_flag")],
-                            index.get("back_start"),
-                            index.get("back_end"));
-                    float[] segmentEcg = new float[frontEcg.length+backEcg.length];
-                    System.arraycopy(frontEcg,0,segmentEcg,0,frontEcg.length);
-                    System.arraycopy(backEcg,0,segmentEcg,frontEcg.length,backEcg.length);
-
-                    float[] minMaxSegmentEcg = minMaxScale(segmentEcg);
-                    if(reCheckSegment(minMaxSegmentEcg)){
-                        int bpm = getBpm(index.get("peak_sample"));
-                        String predictAnn = predict(minMaxSegmentEcg);
-
-
-                        setNotification(bpm,predictAnn);
-                        setSegmentPlot(minMaxSegmentEcg,bpm,predictAnn);
-                        saveLocalSegmentIndex(index,bpm,predictAnn);
-                    }
-                    //forDebug(index,segmentEcg);
-
-                    segmentIndexs.poll();
-                }
-                else{
-                    return;
                 }
             }
             else{
-                return;
+                findPeak();
+            }
+        }
+    }
+
+
+
+
+
+        private void findPeak() {
+            Log.v(FUNCTION_TAG,"user:findPeak()");
+            int peakIndex = -1;
+            float peakValue = -99999;
+            if (thresholdStart != -1 && thresholdEnd != -1) {
+                if(checkThresholdExcess()){
+                    //뒤
+                    for(int i=thresholdStart; i<WINDOW_LENGTH; i++) {
+                        if (peakValue <= originalEcg[i]) {
+                            peakIndex = i;
+                            peakValue = originalEcg[i];
+                        }
+                    }
+                    //앞
+                    for(int i=0; i<=thresholdEnd; i++){
+                        if(peakValue<=originalEcg[i]){
+                            peakIndex = i;
+                            peakValue = originalEcg[i];
+                        }
+                    }
+                }
+                else{
+                    for(int i=thresholdStart; i<=thresholdEnd; i++){
+                        if(peakValue<=originalEcg[i]){
+                            peakIndex = i;
+                            peakValue = originalEcg[i];
+                        }
+                    }
+                }
+
+                Log.i(SEGMENTATION_TAG,"PEAK!");
+                setPeakIndex(peakIndex,windowCnt);
+                setSegmentIndex(peakIndex,windowCnt);
+
+                thresholdStart = -1;
+                thresholdEnd = -1;
+
+            }
+        }
+            //함수 이름 변경
+            private boolean checkThresholdExcess(){
+                if(thresholdEnd - thresholdStart>0){
+                    return false;
+                }
+                else{
+                    return true;
+                }
+            }
+
+            private void setPeakIndex(int peakIndex,int windowCnt){
+                int[] peak = new int[2];
+                peak[0] = windowCnt;
+                peak[1] = peakIndex;
+                segmentPeakQueue.offer(peak);
+            }
+
+            private void setSegmentIndex(int peakIndex,int windowCnt){
+                Log.v(FUNCTION_TAG,"user:setSegmentIndex()");
+
+                int startIndex = peakIndex - SEGMENT_LENGTH;
+                int endIndex = peakIndex  + SEGMENT_LENGTH;
+
+                int[] frontSegIndex = new int[3];
+                int[] backSegIndex = new int[3];
+                HashMap<String,int[]> segmentIndex = new HashMap<String,int[]>();
+
+                if(checkSegmentExcess(startIndex,endIndex)){
+                    if(startIndex < 0){
+                        frontSegIndex[0] = windowCnt;
+                        frontSegIndex[1] = WINDOW_LENGTH+startIndex;
+                        frontSegIndex[2] = WINDOW_LENGTH;
+                        backSegIndex[0] = windowCnt-1;
+                        backSegIndex[1] = 0;
+                        backSegIndex[2] = endIndex;
+                    }
+                    if(endIndex > WINDOW_LENGTH){
+                        frontSegIndex[0] = windowCnt;
+                        frontSegIndex[1] = startIndex;
+                        frontSegIndex[2] = WINDOW_LENGTH;
+                        backSegIndex[0] = windowCnt+1;
+                        backSegIndex[1] = 0 ;
+                        backSegIndex[2] = endIndex-WINDOW_LENGTH;
+                    }
+                }
+                else{
+                    frontSegIndex[0] = windowCnt;
+                    frontSegIndex[1] = startIndex;
+                    frontSegIndex[2] = peakIndex;
+                    backSegIndex[0] = windowCnt;
+                    backSegIndex[1] = peakIndex;
+                    backSegIndex[2] = endIndex;
+                }
+                segmentIndex.put("front",frontSegIndex);
+                segmentIndex.put("back",backSegIndex);
+                segmentIndexQueue.offer(segmentIndex);
+            }
+
+                private boolean checkSegmentExcess(int start,int end){
+                    //초과 되는 경우
+                    if((start<0) || (end>WINDOW_LENGTH)){
+                        return true;
+                    }
+                    else{
+                        return false;
+                    }
+                }
+
+
+
+    private void getSegment()  {
+        Log.v(FUNCTION_TAG,"user:setSegment()");
+        while(!segmentIndexQueue.isEmpty()){
+            int[] peak = segmentPeakQueue.peek();
+            HashMap<String,int[]> index = segmentIndexQueue.peek();
+            if(index.get("back")[0]==windowCnt){
+                if(index.get("back")[2]<=dataFlag){
+                    //indexing
+                    float[] frontEcg = Arrays.copyOfRange(originalEcg,
+                            index.get("front")[0],
+                            index.get("front")[1]);
+                    float[] backEcg = Arrays.copyOfRange(originalEcg,
+                            index.get("back")[0],
+                            index.get("back")[1])
+                    float[] segmentEcg = new float[frontEcg.length+backEcg.length];
+
+                    returnAllResult(peak,index,segmentEcg);
+
+                    segmentPeakQueue.poll();
+                    segmentIndexQueue.poll();
+                }
+            }
+        }
+    }
+
+        private void returnAllResult(int[] peakIndex,HashMap<String,int[]> segmentIndex,float[] segment){
+            int bpm = getBpm(peakIndex[1]);
+
+            float[] minMaxSegmentEcg = minMaxScale(segment);
+            String predictAnn = predict(minMaxSegmentEcg);
+
+
+            setNotification(bpm,predictAnn);
+            setSegmentPlot(minMaxSegmentEcg,bpm,predictAnn);
+
+            saveLocalSegmentIndex(peakIndex,segmentIndex,bpm,predictAnn);
+        }
+
+            private float[] minMaxScale(float[] data){
+                float minValue=99999;
+                float maxValue=-1;
+
+                for(int i=0; i<data.length;i++){
+                    float d = data[i];
+                    if(d>maxValue){
+                        maxValue =d;
+                    }
+                    if(d<minValue){
+                        minValue = d;
+                    }
+                }
+
+                float[] scaleData = new float[data.length];
+                float under =  maxValue-minValue;
+                for(int i=0; i<data.length; i++){
+                    float up = data[i]-minValue;
+                    scaleData[i] = up/under;
+                }
+
+
+                return scaleData;
+            }
+
+
+
+
+            public int getBpm(int currentRpeak){
+                Log.v(FUNCTION_TAG,"user:getBpm()");
+                float RR_interval = 0;
+
+                if(currentRpeak < prevRpeak){
+                    RR_interval = currentRpeak + (WINDOW_LENGTH-prevRpeak);
+                }
+                else{
+                    RR_interval = currentRpeak - prevRpeak;
+                }
+
+                RR_interval = RR_interval * PERIOD;
+                Log.i("RR INTERVAL",String.valueOf(RR_interval));
+
+                prevRpeak = currentRpeak;
+
+                return (int)(60 / RR_interval);
+            }
+
+
+
+
+            public String predict(float[] data){
+                Log.v(FUNCTION_TAG,"user:predict()");
+
+                float[][][] input = new float[1][INPUT_LENGTH][1];
+                for(int i=0; i<data.length; i++){
+                    input[0][i][0] = data[i];
+                }
+
+
+                float[][] output = new float[1][OUTPUT_LENGTH];
+                Log.i(TENSORFLOW_TAG,Arrays.deepToString(output));
+                interpreter.run(input,output);
+
+                Log.i(TENSORFLOW_TAG,Arrays.deepToString(output));
+                float value = -1;
+                int flag = 0;
+                for(int i=0; i< output[0].length; i++){
+                    if(output[0][i]>=value){
+                        Log.i(TENSORFLOW_TAG,"upup");
+                        flag = i;
+                        value = output[0][i];
+                    }
+                }
+
+                String result = ANN[flag];
+                Log.i(TENSORFLOW_TAG,String.valueOf(result));
+
+                return result;
+            }
+
+            void setNotification(int BPM, String predict){
+                notificationManager.notify(1,new NotificationCompat.Builder(this, "EcgProcess")
+                        .setContentTitle("EcgStatus")
+                        .setContentText("BPM: "+BPM+"  "+ "ANN: " + predict )
+                        .setSmallIcon(R.mipmap.ic_launcher).build());
+            }
+
+            public void setSegmentPlot(int[] data,int bpm,String predict){
+                float[] reData = new float[data.length];
+                for (int i=0; i<data.length; i++) {
+                    reData[i] = (float)data[i];
+                }
+
+                Log.v(FUNCTION_TAG,"user:segmentPlot()");
+                Intent intent = new Intent("segmentation");
+                intent.putExtra("data",reData);
+                sendBroadcast(intent);
+
+
+                intent = null;
+                intent = new Intent("INFORMATION");
+                intent.putExtra("BPM",bpm);
+                intent.putExtra("PREDICT",predict);
+                //intent.putExtra("predict",predict);
+                sendBroadcast(intent);
+
+            }
+
+
+            public void setSegmentPlot(float[] data,int bpm,String predict){
+                Log.v(FUNCTION_TAG,"user:segmentPlot()");
+                Intent intent = new Intent("segmentation");
+                intent.putExtra("data",data);
+                sendBroadcast(intent);
+
+
+                intent = null;
+                intent = new Intent("INFORMATION");
+                intent.putExtra("BPM",bpm);
+                intent.putExtra("PREDICT",predict);
+                //intent.putExtra("predict",predict);
+                sendBroadcast(intent);
+
+            }
+
+
+
+            public void saveLocalSegmentIndex(int[] peakIndex,HashMap<String,int[]> segmentIndex,int bpm, String predict){
+                Log.v(FUNCTION_TAG,"user:saveLocalSegmentIndex()");
+                File f = segmentIndexFile;
+                try {
+                    BufferedWriter out = new BufferedWriter(new FileWriter(f,true));
+                    StringBuilder sb = new StringBuilder();
+                    sb.append(peakIndex[0]).append(",").append(peakIndex[1]).append(",")
+                            .append(bpm).append(",").append(predict).append("\n");
+                    int[] front = segmentIndex.get("front");
+                    int[] back = segmentIndex.get("back");
+                    sb.append(front[0]).append(",").append(front[1]).append(",").append(front[2]).append("\n");
+                    sb.append(back[0]).append(",").append(back[1]).append(",").append(back[3]).append("\n");
+
+                    out.write(sb.toString());
+                    out.flush();
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    public void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager manager = getBaseContext().getSystemService(NotificationManager.class);
+            if(manager.getNotificationChannel("EcgProcess")==null){
+                NotificationChannel serviceChannel = new NotificationChannel(
+                        "EcgProcess",
+                        "EcgProcess",
+                        NotificationManager.IMPORTANCE_NONE
+                );
+                manager.createNotificationChannel(serviceChannel);
             }
 
         }
     }
 
-    private float[] minMaxScale(float[] data){
-        float minValue=99999;
-        float maxValue=-1;
-
-        for(int i=0; i<data.length;i++){
-            float d = data[i];
-            if(d>maxValue){
-                maxValue =d;
-            }
-            if(d<minValue){
-                minValue = d;
-            }
-        }
-
-        float[] scaleData = new float[data.length];
-        float under =  maxValue-minValue;
-        for(int i=0; i<data.length; i++){
-            float up = data[i]-minValue;
-            scaleData[i] = up/under;
-        }
 
 
-        return scaleData;
+
+
+    private MappedByteBuffer loadModelFile(String modelPath) throws IOException {
+        AssetFileDescriptor fileDescriptor = getAssets().openFd(modelPath);
+        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
+        FileChannel fileChannel = inputStream.getChannel();
+        long startOffset = fileDescriptor.getStartOffset();
+        long declaredLength = fileDescriptor.getDeclaredLength();
+        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
     }
+
+
+    private Interpreter getTfliteInterpreter(String modelPath){
+        try {
+            return new Interpreter(loadModelFile(modelPath));
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
+
+    private void sendBleDataTestUse_preprocessing(){
+        Intent intent = new Intent("BLE");
+
+
+        float[] allData = new float[DATA_LENGTH*2];
+        //복붙!!
+        System.arraycopy(originalEcg,dataFlag,allData,0,DATA_LENGTH);
+        System.arraycopy(processingEcg,dataFlag,allData,DATA_LENGTH,DATA_LENGTH);
+        intent.putExtra("TestUse_preprocessing",allData);
+        sendBroadcast(intent);
+
+    }
+
+
 
     private boolean reCheckSegment(float[] minMaxData){
         int flag = minMaxData.length/2;
@@ -697,170 +866,6 @@ public class EcgProcess extends Service {
             return false;
         }
     }
-
-
-    public int getBpm(int currentRpeak){
-        Log.v(FUNCTION_TAG,"user:getBpm()");
-        float RR_interval = 0;
-
-        if(currentRpeak < prevRpeak){
-            RR_interval = currentRpeak + (WINDOW_LENGTH-prevRpeak);
-        }
-        else{
-            RR_interval = currentRpeak - prevRpeak;
-        }
-
-        RR_interval = RR_interval * PERIOD;
-        Log.i("RR INTERVAL",String.valueOf(RR_interval));
-
-        prevRpeak = currentRpeak;
-
-        return (int)(60 / RR_interval);
-    }
-
-
-
-
-    public String predict(float[] data){
-        Log.v(FUNCTION_TAG,"user:predict()");
-
-        float[][][] input = new float[1][INPUT_LENGTH][1];
-        for(int i=0; i<data.length; i++){
-            input[0][i][0] = data[i];
-        }
-
-
-        float[][] output = new float[1][OUTPUT_LENGTH];
-        Log.i(TENSORFLOW_TAG,Arrays.deepToString(output));
-        interpreter.run(input,output);
-
-        Log.i(TENSORFLOW_TAG,Arrays.deepToString(output));
-        float value = -1;
-        int flag = 0;
-        for(int i=0; i< output[0].length; i++){
-            if(output[0][i]>=value){
-                Log.i(TENSORFLOW_TAG,"upup");
-                flag = i;
-                value = output[0][i];
-            }
-        }
-
-        String result = ANN[flag];
-        Log.i(TENSORFLOW_TAG,String.valueOf(result));
-
-        return result;
-    }
-
-    void setNotification(int BPM, String predict){
-        notificationManager.notify(1,new NotificationCompat.Builder(this, "EcgProcess")
-                .setContentTitle("EcgStatus")
-                .setContentText("BPM: "+BPM+"  "+ "ANN: " + predict )
-                .setSmallIcon(R.mipmap.ic_launcher).build());
-    }
-
-    public void setSegmentPlot(int[] data,int bpm,String predict){
-        float[] reData = new float[data.length];
-        for (int i=0; i<data.length; i++) {
-            reData[i] = (float)data[i];
-        }
-
-        Log.v(FUNCTION_TAG,"user:segmentPlot()");
-        Intent intent = new Intent("segmentation");
-        intent.putExtra("data",reData);
-        sendBroadcast(intent);
-
-
-        intent = null;
-        intent = new Intent("INFORMATION");
-        intent.putExtra("BPM",bpm);
-        intent.putExtra("PREDICT",predict);
-        //intent.putExtra("predict",predict);
-        sendBroadcast(intent);
-
-    }
-
-
-    public void setSegmentPlot(float[] data,int bpm,String predict){
-        Log.v(FUNCTION_TAG,"user:segmentPlot()");
-        Intent intent = new Intent("segmentation");
-        intent.putExtra("data",data);
-        sendBroadcast(intent);
-
-
-        intent = null;
-        intent = new Intent("INFORMATION");
-        intent.putExtra("BPM",bpm);
-        intent.putExtra("PREDICT",predict);
-        //intent.putExtra("predict",predict);
-        sendBroadcast(intent);
-
-    }
-
-
-
-    public void saveLocalSegmentIndex(HashMap<String,Integer> index,int bpm, String predict){
-        Log.v(FUNCTION_TAG,"user:saveLocalSegmentIndex()");
-        File f = segmentIndexFile;
-        try {
-            int peak_cnt=-1;
-            int front_cnt=-1;
-            int back_cnt=-1;
-
-            if(index.get("peak_flag")!=windowFlag){
-                peak_cnt = windowCnt-1;
-            }
-            else{
-                peak_cnt = windowCnt;
-            }
-            if(index.get("front_flag")!=windowFlag){
-                front_cnt = windowCnt-1;
-            }
-            else{
-                front_cnt = windowCnt;
-            }
-            if(index.get("back_flag")!=windowFlag){
-                back_cnt = windowCnt-1;
-            }
-            else{
-                back_cnt = windowCnt;
-            }
-
-            BufferedWriter out = new BufferedWriter(new FileWriter(f,true));
-            StringBuilder sb = new StringBuilder();
-            sb.append(peak_cnt).append(",").append(index.get("peak_sample")).append(",")
-                    .append(bpm).append(",").append(predict).append("\n");
-            sb.append(front_cnt).append(",").append(index.get("front_start")).append(",").append(index.get("front_end")).append("\n");
-            sb.append(back_cnt).append(",").append(index.get("back_start")).append(",").append(index.get("back_end")).append("\n");
-
-            out.write(sb.toString());
-            out.flush();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-    }
-
-
-
-
-    public void saveLocalWindow(int flag, int cnt) throws IOException {
-        Log.v(FUNCTION_TAG,"user:saveLocalWindow()");
-        File f = new File(windowFile,String.valueOf(cnt)+".csv");
-        BufferedWriter out = new BufferedWriter(new FileWriter(f,true));
-
-        StringBuilder sb = new StringBuilder();
-        for (float s : originalEcg[flag]) {
-            sb.append(String.valueOf(s)).append(",");
-        }
-        out.write(sb.toString());
-        out.flush();
-    }
-
-
-
-
-
 
     public int[] getWindowCnt(int front, int end){
         Log.v(FUNCTION_TAG,"user:getWindowCnt()");
@@ -891,49 +896,7 @@ public class EcgProcess extends Service {
     }
 
 
-    public void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationManager manager = getBaseContext().getSystemService(NotificationManager.class);
-            if(manager.getNotificationChannel("EcgProcess")==null){
-                NotificationChannel serviceChannel = new NotificationChannel(
-                        "EcgProcess",
-                        "EcgProcess",
-                        NotificationManager.IMPORTANCE_NONE
-                );
-                manager.createNotificationChannel(serviceChannel);
-            }
-
-        }
-    }
-
-
-
-    private MappedByteBuffer loadModelFile(String modelPath) throws IOException {
-        AssetFileDescriptor fileDescriptor = getAssets().openFd(modelPath);
-        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
-        FileChannel fileChannel = inputStream.getChannel();
-        long startOffset = fileDescriptor.getStartOffset();
-        long declaredLength = fileDescriptor.getDeclaredLength();
-        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
-    }
-
-
-    private Interpreter getTfliteInterpreter(String modelPath){
-        try {
-            return new Interpreter(loadModelFile(modelPath));
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-
-
-
-
-
-
+    /*
 
     public void forDebug(HashMap<String,Integer> index, int[] data) throws IOException {
         //save;
@@ -968,20 +931,7 @@ public class EcgProcess extends Service {
 
     }
 
-    private void sendBleDataTestUse_preprocessing(){
-        Intent intent = new Intent("BLE");
 
-
-        float[] allData = new float[DATA_LENGTH*2];
-        //복붙!!
-        System.arraycopy(originalEcg[windowFlag],dataFlag,allData,0,DATA_LENGTH);
-        System.arraycopy(processingEcg[windowFlag],dataFlag,allData,DATA_LENGTH,DATA_LENGTH);
-        intent.putExtra("TestUse_preprocessing",allData);
-        sendBroadcast(intent);
-
-    }
-
-    /*
     public void saveFirebase(byte[] data){
         cnt += 1.0;
 
