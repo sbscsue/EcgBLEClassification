@@ -200,19 +200,20 @@ public class EcgProcess extends Service {
             public void onReceive(Context context, Intent intent) {
                 super.onReceive(context, intent);
                 if(intent.getAction().equals("BLE")){
-                    Log.i(BROADCAST_TAG,intent.getAction());
-                    Log.i(FORDEBUG_TAG,"dataFlag:"+String.valueOf(dataFlag));
+                    //Log.i(BROADCAST_TAG,intent.getAction());
+                    //Log.i(FORDEBUG_TAG,"dataFlag:"+String.valueOf(dataFlag));
                     if(intent.getFloatArrayExtra("BLE_DATA")!=null){
+                        Log.v(FORDEBUG_TAG,"WINDOW_CNT:"+String.valueOf(windowCnt));
                         setData(intent.getFloatArrayExtra("BLE_DATA"));
                         //
                         differSignalFiltering();
                         squareSignalFiltering();
                         averageSignalFiltering();
-                        //findThresholdUpDown();
                         sendBleDataTestUse_preprocessing();
                         if (thresholdMode==1){
                             findThresholdUpDown();
                         }
+
                         updateDataFlag();
                         if(thresholdMode==1){
                             getSegment();
@@ -344,10 +345,11 @@ public class EcgProcess extends Service {
                 float sum = 0;
                 int endIndex = squareEcg.length;
                 for(int i =startIndex; i< endIndex; i++){
-                    sum += squareEcg[i];
+                    sum += processingEcg[i];
                 }
                 thresholdValue = sum / (endIndex-startIndex);
                 thresholdMode = 1 ;
+                Log.i(FORDEBUG_TAG,"ThresholdValue:"+String.valueOf(thresholdValue));
         }
         public void saveLocalWindow(int cnt) throws IOException {
             Log.v(FUNCTION_TAG,"user:saveLocalWindow()");
@@ -390,11 +392,7 @@ public class EcgProcess extends Service {
     private void squareSignalFiltering(){
         Log.v(FUNCTION_TAG,"squareSignalFiltering()");
         for(int i=dataFlag; i< dataFlag+DATA_LENGTH; i++){
-            Log.i(FORDEBUG_TAG,String.valueOf(i));
-            Log.i(FORDEBUG_TAG,String.valueOf(squareEcg[i]));
-            //squareEcg[windowFlag][i] =  (float)Math.pow(squareEcg[windowFlag][i],2);
             squareEcg[i] =  Math.abs(squareEcg[i])*2;
-            Log.i(FORDEBUG_TAG,String.valueOf(squareEcg[i]));
         }
     }
 
@@ -424,6 +422,7 @@ public class EcgProcess extends Service {
                     sum += squareEcg[j];
                 }
                 processingEcg[i] = sum/(N/2);
+                //Log.i("check",String.valueOf(processingEcg[i]));
             }
 
         }
@@ -434,11 +433,11 @@ public class EcgProcess extends Service {
         private boolean checkPreprocessingExcess(int cnt){
             Log.v(FUNCTION_TAG,"user:checkWindowCntIndexExcess()");
             if(dataFlag-cnt<0){
-                Log.i(FORDEBUG_TAG,"TRUE");
+                //Log.i(FORDEBUG_TAG,"TRUE");
                 return true;
             }
             else{
-                Log.i(FORDEBUG_TAG,"FALSE");
+                //Log.i(FORDEBUG_TAG,"FALSE");
                 return false;
             }
         }
@@ -454,8 +453,8 @@ public class EcgProcess extends Service {
             System.arraycopy(squareEcg,frontN,originalArray,0,N);
             System.arraycopy(squareEcg,dataFlag,originalArray,N,DATA_LENGTH);
 
-            Log.i(FORDEBUG_TAG,"originalArrayFirst:"+ String.valueOf(N));
-            Log.i(FORDEBUG_TAG,"originalArraySecond:"+ String.valueOf(originalArray.length));
+            //Log.i(FORDEBUG_TAG,"originalArrayFirst:"+ String.valueOf(N));
+            //Log.i(FORDEBUG_TAG,"originalArraySecond:"+ String.valueOf(originalArray.length));
 
 
             return originalArray;
@@ -465,20 +464,21 @@ public class EcgProcess extends Service {
 
     private void findThresholdUpDown(){
         Log.v(FUNCTION_TAG,"user:findThresholdUpDown()");
-        for(int i=dataFlag; i<DATA_LENGTH; i+=1){
-            float data = originalEcg[i];
-            if(thresholdStart != -1){
+        for(int i=dataFlag; i<dataFlag+DATA_LENGTH; i+=1){
+            float data = processingEcg[i];
+            //Log.i(FORDEBUG_TAG,String.valueOf(processingEcg[i]));
+            if(thresholdStart == -1){
                 if(data>thresholdValue){
-                    Log.i(SEGMENTATION_TAG,"threshold_start:"+String.valueOf(dataFlag+i));
-                    thresholdStart=dataFlag+i;
-                    Log.i(SEGMENTATION_TAG,"threshold_realvaue:"+String.valueOf(data));
+                    //Log.i(FORDEBUG_TAG,"start");
+                    thresholdStart=i;
+                    //Log.i(FORDEBUG_TAG,String.valueOf(thresholdStart));
                 }
             }
-            else if(thresholdEnd != -1){
+            else if(thresholdEnd == -1){
                 if(data<thresholdValue){
-                    Log.i(SEGMENTATION_TAG,"threshold_end:"+String.valueOf(dataFlag+i));
-                    thresholdEnd=dataFlag+i;
-                    Log.i(SEGMENTATION_TAG,"threshold_realvaue:"+String.valueOf(data));
+                    //Log.i(FORDEBUG_TAG,"end");
+                    thresholdEnd=i;
+                    //Log.i(FORDEBUG_TAG,String.valueOf(thresholdEnd));
                 }
             }
             else{
@@ -532,7 +532,7 @@ public class EcgProcess extends Service {
         }
             //함수 이름 변경
             private boolean checkThresholdExcess(){
-                if(thresholdEnd - thresholdStart>0){
+                if(thresholdEnd > thresholdStart){
                     return false;
                 }
                 else{
@@ -559,10 +559,10 @@ public class EcgProcess extends Service {
 
                 if(checkSegmentExcess(startIndex,endIndex)){
                     if(startIndex < 0){
-                        frontSegIndex[0] = windowCnt;
+                        frontSegIndex[0] = windowCnt-1;
                         frontSegIndex[1] = WINDOW_LENGTH+startIndex;
                         frontSegIndex[2] = WINDOW_LENGTH;
-                        backSegIndex[0] = windowCnt-1;
+                        backSegIndex[0] = windowCnt;
                         backSegIndex[1] = 0;
                         backSegIndex[2] = endIndex;
                     }
@@ -603,24 +603,55 @@ public class EcgProcess extends Service {
     private void getSegment()  {
         Log.v(FUNCTION_TAG,"user:setSegment()");
         while(!segmentIndexQueue.isEmpty()){
+            Log.i(FORDEBUG_TAG,"QueueLength:"+String.valueOf(segmentIndexQueue.size()));
             int[] peak = segmentPeakQueue.peek();
             HashMap<String,int[]> index = segmentIndexQueue.peek();
+
+            Log.i(FORDEBUG_TAG,"FRONT");
+            Log.i(FORDEBUG_TAG,String.valueOf(index.get("front")[0]));
+            Log.i(FORDEBUG_TAG,String.valueOf(index.get("front")[1]));
+            Log.i(FORDEBUG_TAG,String.valueOf(index.get("front")[2]));
+
+            Log.i(FORDEBUG_TAG,"BACK");
+            Log.i(FORDEBUG_TAG,String.valueOf(index.get("back")[0]));
+            Log.i(FORDEBUG_TAG,String.valueOf(index.get("back")[1]));
+            Log.i(FORDEBUG_TAG,String.valueOf(index.get("back")[2]));
+            Log.i(FORDEBUG_TAG,"WindowCnt:"+String.valueOf(windowCnt));
+
             if(index.get("back")[0]==windowCnt){
+                Log.i(FORDEBUG_TAG,"조건1");
                 if(index.get("back")[2]<=dataFlag){
+                    Log.i(FORDEBUG_TAG,"조건2");
                     //indexing
                     float[] frontEcg = Arrays.copyOfRange(originalEcg,
-                            index.get("front")[0],
-                            index.get("front")[1]);
+                            index.get("front")[1],
+                            index.get("front")[2]);
                     float[] backEcg = Arrays.copyOfRange(originalEcg,
-                            index.get("back")[0],
-                            index.get("back")[1])
+                            index.get("back")[1],
+                            index.get("back")[2]);
+
+                    Log.i(FORDEBUG_TAG,"FrontLENGTH:"+String.valueOf(frontEcg.length));
+                    Log.i(FORDEBUG_TAG,"BackLENGTH:"+String.valueOf(backEcg.length));
+
                     float[] segmentEcg = new float[frontEcg.length+backEcg.length];
+                    System.arraycopy(segmentEcg,0,frontEcg,0,frontEcg.length);
+                    System.arraycopy(segmentEcg,frontEcg.length,backEcg,0,backEcg.length);
+
+                    Log.i(FORDEBUG_TAG,"LENGTH:"+String.valueOf(segmentEcg.length));
+                    Log.i(FORDEBUG_TAG,Arrays.toString(originalEcg));
+                    Log.i(FORDEBUG_TAG,Arrays.toString(frontEcg));
 
                     returnAllResult(peak,index,segmentEcg);
 
                     segmentPeakQueue.poll();
                     segmentIndexQueue.poll();
                 }
+                else{
+                    break;
+                }
+            }
+            else{
+                break;
             }
         }
     }
@@ -629,6 +660,7 @@ public class EcgProcess extends Service {
             int bpm = getBpm(peakIndex[1]);
 
             float[] minMaxSegmentEcg = minMaxScale(segment);
+            Log.i("tensorflow실행",String.valueOf(minMaxSegmentEcg.length));
             String predictAnn = predict(minMaxSegmentEcg);
 
 
@@ -776,7 +808,7 @@ public class EcgProcess extends Service {
                     int[] front = segmentIndex.get("front");
                     int[] back = segmentIndex.get("back");
                     sb.append(front[0]).append(",").append(front[1]).append(",").append(front[2]).append("\n");
-                    sb.append(back[0]).append(",").append(back[1]).append(",").append(back[3]).append("\n");
+                    sb.append(back[0]).append(",").append(back[1]).append(",").append(back[2]).append("\n");
 
                     out.write(sb.toString());
                     out.flush();

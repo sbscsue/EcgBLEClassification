@@ -248,7 +248,7 @@ public class BluetoothLeService extends Service {
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
             super.onCharacteristicChanged(gatt, characteristic);
-            Log.i(GATT_TAG,"GATT DATA NOTIFY");
+            //Log.i(GATT_TAG,"GATT DATA NOTIFY");
 
             byte[] data = characteristic.getValue();
             sendBleData(data);
@@ -324,7 +324,7 @@ public class BluetoothLeService extends Service {
 
 
     private float[] baseLineRemoveFiltering(float[] data){
-        Log.i("baselineRemove","check");
+        //Log.i("baselineRemove","check");
         double[] doubleData = new double[data.length];
         IntStream.range(0, data.length).forEach(index -> doubleData[index] = data[index]);
 
@@ -338,9 +338,6 @@ public class BluetoothLeService extends Service {
             //filterData[i] = chebyshevIFilter.filter(filterData[i]);
             floatData[i] = (float) filterData[i];
 
-
-            Log.i("baselineRemove_Double",String.valueOf(filterData[i]));
-            Log.i("baselineRemove_Float",String.valueOf(floatData[i]));
         }
 
 

@@ -241,7 +241,7 @@ public class FragmentAllplot extends Fragment {
     }
 
     private void plotTestUse_filter( float[] originalAndFilterData){
-        Log.i("TEST", Arrays.toString(originalAndFilterData));
+        //Log.i("TEST", Arrays.toString(originalAndFilterData));
 
         int n = originalAndFilterData.length/2;
         for(int i=0; i<n; i+=1){
