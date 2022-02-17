@@ -89,6 +89,7 @@ public class EcgProcess extends Service {
 
     //tensorflow
     private Interpreter interpreter;
+    private static float leastTrustConfidence = (float)0.8;
 
     //save
     //firebase
@@ -127,6 +128,8 @@ public class EcgProcess extends Service {
 
     //BPM
     int prevRpeak;
+
+
 
 
 
@@ -710,12 +713,17 @@ public class EcgProcess extends Service {
 
             float[] minMaxSegmentEcg = minMaxScale(segment);
             Log.i("tensorflow실행",String.valueOf(minMaxSegmentEcg.length));
-            String predictAnn = predict(minMaxSegmentEcg);
 
+            float[][] output = predict(minMaxSegmentEcg);
 
+            int flag = outputFlag(output);
+            String predictAnn = outputAnn(flag);
+
+            if(!predictAccuracyCheck(output[0][flag])){
+                //정확도 낮을 떄 표시해줄거;
+            }
             setNotification(bpm,predictAnn);
             setSegmentPlot(minMaxSegmentEcg,bpm,predictAnn);
-
             saveLocalSegmentIndex(peakIndex,segmentIndex,bpm,predictAnn);
         }
 
@@ -769,37 +777,53 @@ public class EcgProcess extends Service {
 
 
 
-            private String predict(float[] data){
+            private float[][] predict(float[] data){
                 Log.v(FUNCTION_TAG,"user:predict()");
 
-                float[][][] input = new float[1][INPUT_LENGTH][1];
-                for(int i=0; i<data.length; i++){
-                    input[0][i][0] = data[i];
-                }
-
-
+                float[][][] input = inputProcessing(data);
                 float[][] output = new float[1][OUTPUT_LENGTH];
-                Log.i(TENSORFLOW_TAG,Arrays.deepToString(output));
+
+                //Log.i(TENSORFLOW_TAG,Arrays.deepToString(output));
                 interpreter.run(input,output);
+                //Log.i(TENSORFLOW_TAG,Arrays.deepToString(output));
 
-                Log.i(TENSORFLOW_TAG,Arrays.deepToString(output));
-                float value = -1;
-                int flag = 0;
-                for(int i=0; i< output[0].length; i++){
-                    if(output[0][i]>=value){
-                        Log.i(TENSORFLOW_TAG,"upup");
-                        flag = i;
-                        value = output[0][i];
-                    }
-                }
-
-                String result = ANN[flag];
-                Log.i(TENSORFLOW_TAG,String.valueOf(result));
-
-                return result;
+                return output;
             }
 
+                //to tensor input
+                private float[][][] inputProcessing(float[] data){
+                    float[][][] input = new float[1][INPUT_LENGTH][1];
+                    for(int i=0; i<data.length; i++){
+                        input[0][i][0] = data[i];
+                    }
+                    return input;
+                }
+                //return high value index
+                private int outputFlag(float[][] output){
+                    float value = -1;
+                    int flag = 0;
+                    for(int i=0; i< output[0].length; i++){
+                        if(output[0][i]>=value){
+                            Log.i(TENSORFLOW_TAG,"upup");
+                            flag = i;
+                            value = output[0][i];
+                        }
+                    }
+                    return flag;
+                }
 
+                private String outputAnn(int flag){
+                    return ANN[flag];
+                }
+
+                private boolean predictAccuracyCheck(float value){
+                    if(value<leastTrustConfidence){
+                        return false;
+                    }
+                    else{
+                        return true;
+                    }
+                }
 
             void setNotification(int BPM, String predict){
                 notificationManager.notify(1,new NotificationCompat.Builder(this, "EcgProcess")
