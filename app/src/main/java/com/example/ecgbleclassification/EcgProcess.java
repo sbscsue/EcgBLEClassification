@@ -335,7 +335,15 @@ public class EcgProcess extends Service {
             }
 
         }
+        setBleDataPlot(data);
     }
+        private void setBleDataPlot(float[] data){
+            Log.v(FUNCTION_TAG,"user:setBleDataPlot()");
+            Intent intent = new Intent("ALL");
+            intent.putExtra("data",data);
+            intent.putExtra("startIndex",String.valueOf(dataFlag));
+            sendBroadcast(intent);
+        }
 
     private void updateDataFlag(){
         dataFlag += DATA_LENGTH;
