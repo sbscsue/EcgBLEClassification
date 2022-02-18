@@ -42,7 +42,8 @@ public class FragmentAllplot extends Fragment {
     int flag = 0;
     private LineChart chart;
     ArrayList<Entry> chart_entry = new ArrayList<Entry>();
-    ArrayList<Entry> chartEntryTestUse_filter = new ArrayList<Entry>();
+    ArrayList<Entry> chartEntryTestUse_preprocessing1 = new ArrayList<Entry>();
+    ArrayList<Entry> chartEntryTestUse_preprocessing2 = new ArrayList<Entry>();
 
 
     TextView bpmView;
@@ -86,7 +87,7 @@ public class FragmentAllplot extends Fragment {
                 if(intent.getAction().equals("BLE")){
 
                     if(intent.getFloatArrayExtra("TestUse_preprocessing")!=null){
-                        plotTestUse_filter(intent.getFloatArrayExtra("TestUse_preprocessing"));
+                        plotTestUse_preprocessing(intent.getFloatArrayExtra("TestUse_preprocessing"));
                     }
                      /*
                     if(intent.getFloatArrayExtra("BLE_DATA")!=null){
@@ -130,7 +131,8 @@ public class FragmentAllplot extends Fragment {
             //d.setX(i+1);
             d.setY(1);
             chart_entry.add(d);
-            chartEntryTestUse_filter.add(d);
+            chartEntryTestUse_preprocessing1.add(d);
+            chartEntryTestUse_preprocessing2.add(d);
         }
 
 
@@ -240,22 +242,28 @@ public class FragmentAllplot extends Fragment {
         chart.invalidate();
     }
 
-    private void plotTestUse_filter( float[] originalAndFilterData){
+    private void plotTestUse_preprocessing(float[] allData){
         //Log.i("TEST", Arrays.toString(originalAndFilterData));
 
-        int n = originalAndFilterData.length/2;
+        int n = DATA_LENGTH;
         for(int i=0; i<n; i+=1){
             Entry d1 = new Entry();
 
             d1.setX(chart_entry.get(i+flag).getX());
-            d1.setY(originalAndFilterData[i]);
+            d1.setY(allData[i]);
 
             Entry d2 = new Entry();
-            d2.setX(chartEntryTestUse_filter.get(i+flag).getX());
-            d2.setY(originalAndFilterData[i+n]);
+            d2.setX(chartEntryTestUse_preprocessing1.get(i+flag).getX());
+            d2.setY(allData[i+n]);
+
+            Entry d3 = new Entry();
+            d3.setX(chartEntryTestUse_preprocessing1.get(i+flag).getX());
+            d3.setY(allData[i+(n*2)]);
+
 
             chart_entry.set(i+flag,d1);
-            chartEntryTestUse_filter.set(i+flag,d2);
+            chartEntryTestUse_preprocessing1.set(i+flag,d2);
+            chartEntryTestUse_preprocessing2.set(i+flag,d3);
         }
         flag += DATA_LENGTH;
         if(flag==PLOT_LENGTH){
@@ -270,17 +278,22 @@ public class FragmentAllplot extends Fragment {
         dataSet.setLineWidth(2);
         dataSet.setColor(R.color.black);
 
-        LineDataSet dataSetTestUse_filter = new LineDataSet(chartEntryTestUse_filter,"filter");
-        dataSetTestUse_filter.setDrawCircles(false);
-        dataSetTestUse_filter.setLineWidth(2);
+        LineDataSet dataSetTestUse_sqaure = new LineDataSet(chartEntryTestUse_preprocessing1,"square");
+        dataSetTestUse_sqaure.setDrawCircles(false);
+        dataSetTestUse_sqaure.setLineWidth(2);
+
+        LineDataSet dataSetTestUse_ma = new LineDataSet(chartEntryTestUse_preprocessing2,"ma");
+        dataSetTestUse_ma.setDrawCircles(false);
+        dataSetTestUse_ma.setLineWidth(2);
+        dataSetTestUse_ma.setColor(getContext().getColor(R.color.purple_500));
 
 
         //https://weeklycoding.com/mpandroidchart-documentation/chartdata/
 
         ArrayList<ILineDataSet> chartSet = new ArrayList<ILineDataSet>();
         chartSet.add(dataSet);
-        chartSet.add(dataSetTestUse_filter);
-
+        chartSet.add(dataSetTestUse_sqaure);
+        chartSet.add(dataSetTestUse_ma);
 
         LineData lineData = new LineData(chartSet);
         chart.setData(lineData);

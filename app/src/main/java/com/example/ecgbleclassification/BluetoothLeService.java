@@ -106,8 +106,9 @@ public class BluetoothLeService extends Service {
         //chebyshevIFilter.highPass(2    ,400,3,3);
         chebyshevIFilter.bandPass(2,400,21,19,3);
 
-        butterworthLowPassFilter.lowPass(3,400,40);
         butterworthHightPassFilter.highPass(2,400,0.5);
+        butterworthLowPassFilter.lowPass(3,400,40);
+
 
 
         //계속 켜지게
@@ -333,7 +334,6 @@ public class BluetoothLeService extends Service {
         for(int i=0; i<doubleData.length; i++){
             filterData[i] = doubleData[i];
             filterData[i] = butterworthHightPassFilter.filter(filterData[i]);
-            filterData[i] = butterworthLowPassFilter.filter(filterData[i]);
             filterData[i] = butterworthLowPassFilter.filter(filterData[i]);
             //filterData[i] = chebyshevIFilter.filter(filterData[i]);
             floatData[i] = (float) filterData[i];

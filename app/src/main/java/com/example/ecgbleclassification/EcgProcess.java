@@ -366,7 +366,7 @@ public class EcgProcess extends Service {
                     sum += processingEcg[i];
                 }
                 thresholdValue = sum / (endIndex-startIndex);
-                thresholdValue = thresholdValue*3;
+                thresholdValue = thresholdValue*5;
                 thresholdMode = 1 ;
                 Log.i(VALUE_TAG,"ThresholdValue:"+String.valueOf(thresholdValue));
         }
@@ -396,7 +396,7 @@ public class EcgProcess extends Service {
                 originalArray = getPreviousWindowValue(DIFF_N,originalEcg);
                 for(int i=0; i<DATA_LENGTH; i++){
                     int j = i+DIFF_N;
-                    caculateArray[i] = (-2)*originalArray[j-2] + (-1)*originalArray[j-1] + (1)*originalArray[j+1] + (2)*originalArray[j+2];
+                    caculateArray[i] = (-2)*originalArray[j-2] + + originalArray[j] + (-1)*originalArray[j-1] + (1)*originalArray[j+1] + (2)*originalArray[j+2];
                 }
             }
             else if(dataFlag+DATA_LENGTH+DIFF_N>WINDOW_LENGTH){
@@ -429,7 +429,7 @@ public class EcgProcess extends Service {
 
     private void averageSignalFiltering(){
         Log.v(FUNCTION_TAG,"averageSignalFiltering()");
-        int N = 3;
+        int N = 10;
         if (checkPreprocessingExcess(N)) {
             //앞뒤 diff_n만큼 자른 배열 갖고옴
             float[] originalArray;
@@ -709,22 +709,23 @@ public class EcgProcess extends Service {
     }
 
         private void returnAllResult(int[] peakIndex,HashMap<String,int[]> segmentIndex,float[] segment){
-            int bpm = getBpm(peakIndex[1]);
-
+            //predict
             float[] minMaxSegmentEcg = minMaxScale(segment);
             Log.i("tensorflow실행",String.valueOf(minMaxSegmentEcg.length));
 
             float[][] output = predict(minMaxSegmentEcg);
 
+            //ann
             int flag = outputFlag(output);
             String predictAnn = outputAnn(flag);
+            //bpm
+            int bpm = getBpm(peakIndex[1]);
+            //predictAccuracyCheck
+            boolean accuracyCheck = predictAccuracyCheck(output[0][flag]);
 
-            if(!predictAccuracyCheck(output[0][flag])){
-                //정확도 낮을 떄 표시해줄거;
-            }
             setNotification(bpm,predictAnn);
-            setSegmentPlot(minMaxSegmentEcg,bpm,predictAnn);
-            saveLocalSegmentIndex(peakIndex,segmentIndex,bpm,predictAnn);
+            setSegmentPlot(minMaxSegmentEcg,accuracyCheck,bpm,predictAnn);
+            saveLocalSegmentIndex(peakIndex,segmentIndex,accuracyCheck,bpm,predictAnn);
         }
 
             private float[] minMaxScale(float[] data){
@@ -773,7 +774,6 @@ public class EcgProcess extends Service {
 
                 return (int)(60 / RR_interval);
             }
-
 
 
 
@@ -832,17 +832,22 @@ public class EcgProcess extends Service {
                         .setSmallIcon(R.mipmap.ic_launcher).build());
             }
 
-            public void setSegmentPlot(int[] data,int bpm,String predict){
+            public void setSegmentPlot(int[] data,boolean predictAccuracyFlag,int bpm,String predict){
+                Log.v(FUNCTION_TAG,"user:segmentPlot()");
                 float[] reData = new float[data.length];
                 for (int i=0; i<data.length; i++) {
                     reData[i] = (float)data[i];
                 }
 
-                Log.v(FUNCTION_TAG,"user:segmentPlot()");
                 Intent intent = new Intent("segmentation");
-                intent.putExtra("data",reData);
+                intent.putExtra("data",data);
+                if(predictAccuracyFlag){
+                    intent.putExtra("accuracy",true);
+                }
+                else{
+                    intent.putExtra("accuracy",false);
+                }
                 sendBroadcast(intent);
-
 
                 intent = null;
                 intent = new Intent("INFORMATION");
@@ -850,16 +855,20 @@ public class EcgProcess extends Service {
                 intent.putExtra("PREDICT",predict);
                 //intent.putExtra("predict",predict);
                 sendBroadcast(intent);
-
             }
 
 
-            public void setSegmentPlot(float[] data,int bpm,String predict){
+            public void setSegmentPlot(float[] data,boolean predictAccuracyFlag,int bpm,String predict){
                 Log.v(FUNCTION_TAG,"user:segmentPlot()");
                 Intent intent = new Intent("segmentation");
                 intent.putExtra("data",data);
+                if(predictAccuracyFlag){
+                    intent.putExtra("accuracy",true);
+                }
+                else{
+                    intent.putExtra("accuracy",false);
+                }
                 sendBroadcast(intent);
-
 
                 intent = null;
                 intent = new Intent("INFORMATION");
@@ -867,19 +876,19 @@ public class EcgProcess extends Service {
                 intent.putExtra("PREDICT",predict);
                 //intent.putExtra("predict",predict);
                 sendBroadcast(intent);
-
             }
 
 
 
-            public void saveLocalSegmentIndex(int[] peakIndex,HashMap<String,int[]> segmentIndex,int bpm, String predict){
+
+            public void saveLocalSegmentIndex(int[] peakIndex,HashMap<String,int[]> segmentIndex,boolean accuracyCheck,int bpm, String predict){
                 Log.v(FUNCTION_TAG,"user:saveLocalSegmentIndex()");
                 File f = segmentIndexFile;
                 try {
                     BufferedWriter out = new BufferedWriter(new FileWriter(f,true));
                     StringBuilder sb = new StringBuilder();
                     sb.append(peakIndex[0]).append(",").append(peakIndex[1]).append(",")
-                            .append(bpm).append(",").append(predict).append("\n");
+                            .append(accuracyCheck).append(",").append(bpm).append(",").append(predict).append("\n");
                     int[] front = segmentIndex.get("front");
                     int[] back = segmentIndex.get("back");
                     sb.append(front[0]).append(",").append(front[1]).append(",").append(front[2]).append("\n");
@@ -893,8 +902,6 @@ public class EcgProcess extends Service {
                 }
 
             }
-
-
 
 
 
@@ -952,10 +959,11 @@ public class EcgProcess extends Service {
         Intent intent = new Intent("BLE");
 
 
-        float[] allData = new float[DATA_LENGTH*2];
+        float[] allData = new float[DATA_LENGTH*3];
         //복붙!!
         System.arraycopy(originalEcg,dataFlag,allData,0,DATA_LENGTH);
-        System.arraycopy(processingEcg,dataFlag,allData,DATA_LENGTH,DATA_LENGTH);
+        System.arraycopy(squareEcg,dataFlag,allData,DATA_LENGTH,DATA_LENGTH);
+        System.arraycopy(processingEcg,dataFlag,allData,DATA_LENGTH*2,DATA_LENGTH);
         intent.putExtra("TestUse_preprocessing",allData);
         sendBroadcast(intent);
 
@@ -963,30 +971,7 @@ public class EcgProcess extends Service {
 
 
 
-    private boolean reCheckSegment(float[] minMaxData){
-        int flag = minMaxData.length/2;
-        Log.i("CHECK_RECHECKSEGMENT",String.valueOf(minMaxData[flag]));
-        if((minMaxData[flag]==1.0)) {
-            return true;
-        }
-        else{
-            return false;
-        }
-    }
 
-    public int[] getWindowCnt(int front, int end){
-        Log.v(FUNCTION_TAG,"user:getWindowCnt()");
-        int [] cnt = new int[2];
-        if(front==end){
-            cnt[0] = windowCnt;
-            cnt[1] = windowCnt;
-        }
-        else{
-            cnt[0] = windowCnt-1;
-            cnt[1] = windowCnt;
-        }
-        return cnt;
-    }
 
 
 
