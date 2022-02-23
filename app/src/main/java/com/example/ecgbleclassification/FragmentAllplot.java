@@ -7,6 +7,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.res.Resources;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;
@@ -26,14 +27,13 @@ import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 
 public class FragmentAllplot extends Fragment {
     Resources res;
-
+    final String FUNCTION_TAG = "FUNCTION_CHECK";
     final String BIND_TAG = "BIND_CHECK";
+    final String ICON_CHECK = "ICON_CHECK";
 
 
     //vairable
@@ -43,12 +43,16 @@ public class FragmentAllplot extends Fragment {
 
     int PLOT_LENGTH ;
 
-    //chart
+    //chartEcg
     int flag = 0;
     private LineChart chart;
     ArrayList<Entry> chart_entry = new ArrayList<Entry>();
+
     ArrayList<Entry> chartEntryTestUse_preprocessing1 = new ArrayList<Entry>();
     ArrayList<Entry> chartEntryTestUse_preprocessing2 = new ArrayList<Entry>();
+
+    //chartPeak
+    Drawable[][] iconDrawable;
 
     //result
     TextView bpmView;
@@ -97,6 +101,9 @@ public class FragmentAllplot extends Fragment {
         PERIOD = Float.valueOf(res.getString(R.string.period));
         PLOT_LENGTH = res.getInteger(R.integer.all_plot_length);
 
+        iconDrawable = getIconDrawable("NSV");
+        Log.d(ICON_CHECK,iconDrawable[0][0].toString());
+
         Intent intent = new Intent(getActivity(), EcgProcess.class);
         getActivity().bindService(intent, conn, Context.BIND_AUTO_CREATE);
         Log.d(BIND_TAG,conn.toString());
@@ -104,7 +111,9 @@ public class FragmentAllplot extends Fragment {
         theFilter = new IntentFilter();
         theFilter.addAction("BLE");
         theFilter.addAction("ALL");
+        theFilter.addAction("ALL_PEAK");
         theFilter.addAction("INFORMATION");
+
 
         receiver = new Receiver(){
             @Override
@@ -122,8 +131,17 @@ public class FragmentAllplot extends Fragment {
                       */
                 }
                 if(intent.getAction().equals("ALL")){
-                    if((intent.getFloatArrayExtra("data")!=null) && (intent.getStringExtra("startIndex")!=null)){
+                    if(intent.getFloatArrayExtra("data")!=null){
                         dataLengthPlot(intent.getFloatArrayExtra("data"),Integer.valueOf(intent.getStringExtra("startIndex")));
+                    }
+                }
+                if(intent.getAction().equals("ALL_PEAK")){
+                    if(intent.getIntExtra("index",-1)!=-1){
+                        Log.v("check","checkcheck");
+                        peakPlot(intent.getIntExtra("index",-1),
+                                 intent.getBooleanExtra("predictAcc",false),
+                                intent.getIntExtra("flag",-1)
+                        );
                     }
                 }
                 if(intent.getAction().equals("INFORMATION")){
@@ -134,6 +152,23 @@ public class FragmentAllplot extends Fragment {
             }
         };
     }
+        private Drawable[][] getIconDrawable(String annType){
+            Drawable[][] drawables;
+            if(annType=="NSV"){
+                drawables = new Drawable[2][res.getStringArray(R.array.NSV_ANN).length];
+                drawables[0][0] = res.getDrawable(R.drawable.n1);
+                drawables[1][0] = res.getDrawable(R.drawable.n2);
+                drawables[0][1] = res.getDrawable(R.drawable.s1);
+                drawables[1][1] = res.getDrawable(R.drawable.s2);
+                drawables[0][2] = res.getDrawable(R.drawable.v1);
+                drawables[1][2] = res.getDrawable(R.drawable.v2);
+
+                return drawables;
+            }
+            else{
+                return null;
+            }
+        }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -223,12 +258,38 @@ public class FragmentAllplot extends Fragment {
         }
         chartUpdate();
     }
+    private void peakPlot(int index,boolean predictAcc, int annFlag){
+        Log.v(FUNCTION_TAG,"user:peakPlot()");
+        if(index!=-1){
+            int predictAccNum;
+            if(predictAcc == true){
+                predictAccNum = 0;
+            }
+            else{
+                predictAccNum = 1;
+            }
+            float x = chart_entry.get(index).getX();
+            float y =  chart_entry.get(index).getY();
+            Drawable icon = iconDrawable[predictAccNum][flag];
+
+            Entry entry = new Entry(x,y,icon);
+            chart_entry.set(index,entry);
+
+            chartUpdate();
+        }
+        else{
+            return;
+        }
+
+
+    }
+
         private void chartUpdate(){
             chart.clear();
             LineDataSet dataSet = new LineDataSet(chart_entry,"ECG");
             dataSet.setDrawCircles(false);
             dataSet.setLineWidth(2);
-
+            dataSet.setDrawIcons(true);
             //https://weeklycoding.com/mpandroidchart-documentation/chartdata/
             ArrayList<ILineDataSet> chartSet = new ArrayList<ILineDataSet>();
             chartSet.add(dataSet);
@@ -239,9 +300,7 @@ public class FragmentAllplot extends Fragment {
             chart.invalidate();
         }
 
-    private void peakPlot(int index, boolean predictAccuracy){
 
-    }
 
 
     public void plot(byte[] data){

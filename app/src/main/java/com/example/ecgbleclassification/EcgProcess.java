@@ -717,6 +717,8 @@ public class EcgProcess extends Service {
     }
 
         private void returnAllResult(int[] peakIndex,HashMap<String,int[]> segmentIndex,float[] segment){
+            Log.v(FUNCTION_TAG,"user:returnAllResult()");
+
             //predict
             float[] minMaxSegmentEcg = minMaxScale(segment);
             Log.i("tensorflow실행",String.valueOf(minMaxSegmentEcg.length));
@@ -731,8 +733,12 @@ public class EcgProcess extends Service {
             //predictAccuracyCheck
             boolean accuracyCheck = predictAccuracyCheck(output[0][flag]);
 
+
             setNotification(bpm,predictAnn);
-            setSegmentPlot(minMaxSegmentEcg,accuracyCheck,bpm,predictAnn);
+
+            setAllPeakPlot(peakIndex[1],accuracyCheck,flag);
+            setSegmentPeakPlot(minMaxSegmentEcg,accuracyCheck,bpm,predictAnn);
+
             saveLocalSegmentIndex(peakIndex,segmentIndex,accuracyCheck,bpm,predictAnn);
         }
 
@@ -834,13 +840,25 @@ public class EcgProcess extends Service {
                 }
 
             void setNotification(int BPM, String predict){
+                Log.v(FUNCTION_TAG,"user:setNotification()");
                 notificationManager.notify(1,new NotificationCompat.Builder(this, "EcgProcess")
                         .setContentTitle("EcgStatus")
                         .setContentText("BPM: "+BPM+"  "+ "ANN: " + predict )
                         .setSmallIcon(R.mipmap.ic_launcher).build());
             }
 
-            public void setSegmentPlot(int[] data,boolean predictAccuracyFlag,int bpm,String predict){
+
+            
+            private void setAllPeakPlot(int peakIndex,boolean predictAccuracy,int flag){
+                Log.v(FUNCTION_TAG,"user:setAllPeakPlot()");
+                    Intent intent = new Intent("ALL_PEAK");
+                    intent.putExtra("index",peakIndex);
+                    intent.putExtra("predictAcc",predictAccuracy);
+                    intent.putExtra("flag",flag);
+                    sendBroadcast(intent);
+            }
+
+            public void setSegmentPeakPlot(int[] data,boolean predictAccuracyFlag,int bpm,String predict){
                 Log.v(FUNCTION_TAG,"user:segmentPlot()");
                 float[] reData = new float[data.length];
                 for (int i=0; i<data.length; i++) {
@@ -865,8 +883,9 @@ public class EcgProcess extends Service {
                 sendBroadcast(intent);
             }
 
+            
 
-            public void setSegmentPlot(float[] data,boolean predictAccuracyFlag,int bpm,String predict){
+            public void setSegmentPeakPlot(float[] data,boolean predictAccuracyFlag,int bpm,String predict){
                 Log.v(FUNCTION_TAG,"user:segmentPlot()");
                 Intent intent = new Intent("segmentation");
                 intent.putExtra("data",data);
