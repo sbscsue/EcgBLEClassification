@@ -11,11 +11,9 @@ import android.content.res.AssetFileDescriptor;
 import android.content.res.Resources;
 import android.os.Binder;
 import android.os.Build;
-import android.os.Debug;
 import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
-import android.view.Window;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
@@ -28,7 +26,6 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
-import org.junit.platform.engine.UniqueId;
 import org.tensorflow.lite.Interpreter;
 
 import java.io.BufferedWriter;
@@ -43,7 +40,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.Queue;
 
 public class EcgProcess extends Service {
@@ -184,7 +180,7 @@ public class EcgProcess extends Service {
         INPUT_LENGTH = res.getInteger(R.integer.modelInputShape);
         OUTPUT_LENGTH = res.getInteger(R.integer.modelOutputShape);
         ANN = res.getStringArray(R.array.NSV_ANN);
-        interpreter = getTfliteInterpreter("model02.tflite");
+        interpreter = getTfliteInterpreter("360_model03_288.tflite");
 
 
         //notification

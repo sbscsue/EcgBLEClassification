@@ -1,4 +1,4 @@
-model01.tflite  
+400_model01.tflite
 -0118
 -light model 
 -80 epochs 
@@ -6,10 +6,21 @@ model01.tflite
 -output: 3 
         classification (n,s,v)
 
-model02.tflite  
+400_model02.tflite
 -0118
 -heavy model (위와 약 20배 차이남)
 -80 epochs 
 -input:320
 -output: 3 
         classification (n,s,v)
+
+
+360_model03_288.tflite
+-0228
+-light model
+-80 epochs
++rose방법 사용해서 데이터 증강
+-input:288
+-output:3
+        classification (n,s,v)
+-path : C:\sebin\lab\ecg2\git\ecg_data_wfdb\model\04\nsv_288

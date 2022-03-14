@@ -1,6 +1,6 @@
 <resources>
     <!--model setting-->
-    <integer name="modelInputShape">320</integer>
+    <integer name="modelInputShape">288</integer>
     <integer name="modelOutputShape">3</integer>
     <string-array name="AAMI_ANN">
         <item>N</item>
@@ -36,17 +36,17 @@
     </string-array>
 
     <!--BLE DATA RECEIVE SETTING-->
-    <integer name="data_length">50</integer>
+    <integer name="data_length">60</integer>
     <!--BLE 양 추가-->
-    <integer name="sampling_rate">400</integer>
-    <string name="period">0.0025</string>
+    <integer name="sampling_rate">360</integer>
+    <string name="period">0.0028</string>
 
     <!--PLOT LENGTH-->
-    <integer name="all_plot_length">4000</integer>
+    <integer name="all_plot_length">3600</integer>
     <!--WINDOW SETTING-->
-    <integer name="window_length">4000</integer>
+    <integer name="window_length">3600</integer>
     <!--SEGMENT LENGTH(half)-->
-    <integer name="segment_length">160</integer>
+    <integer name="segment_length">144</integer>
 
 
     <!-- SharedPreference Key value for app setting -->
