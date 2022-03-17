@@ -276,8 +276,7 @@ public class BluetoothLeService extends Service {
     private void sendBleData(byte[] data){
         Intent intent = new Intent("BLE");
 
-        float[] parsingData = parsingStringCsvToFloatArray(data);
-        //float[] parsingData = parsingStringCsvToFloatArray(data);
+        float[] parsingData = parsingByteArrayToFloatArray(data);
         float[] filterData = baseLineRemoveFiltering(parsingData);
 
         intent.putExtra("BLE_DATA",filterData);
