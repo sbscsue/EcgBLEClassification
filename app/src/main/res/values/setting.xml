@@ -46,6 +46,8 @@
     <!--WINDOW SETTING-->
     <integer name="window_length">3600</integer>
     <!--SEGMENT LENGTH(half)-->
+    <integer name = "segment_start_length">360</integer>
+    <integer name = "segment_end_length">180</integer>
     <integer name="segment_length">144</integer>
 
 

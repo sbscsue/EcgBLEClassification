@@ -274,16 +274,22 @@ public class BluetoothLeService extends Service {
 
 
     private void sendBleData(byte[] data){
-        Intent intent = new Intent("BLE");
-
-        float[] parsingData = parsingByteArrayToFloatArray(data);
+        byte[] sampleByte = new byte[DATA_LENGTH];
+        System.arraycopy(data,0,sampleByte,0,DATA_LENGTH);
+        float[] parsingData = parsingByteArrayToFloatArray(sampleByte);
         float[] filterData = baseLineRemoveFiltering(parsingData);
 
-        intent.putExtra("BLE_DATA",filterData);
+        int peakDetectionFlag = Byte.toUnsignedInt(data[DATA_LENGTH]);
+
+        Intent intent = new Intent("BLE");
+        intent.putExtra("SAMPLE",filterData);
+        intent.putExtra("PEAK_FLAG",peakDetectionFlag);
+
         sendBroadcast(intent);
 
     }
 
+    //*아직 수정 안함
     private void sendBleDataTestUse_filter(byte[] data){
         Intent intent = new Intent("BLE");
 
@@ -300,11 +306,12 @@ public class BluetoothLeService extends Service {
 
     }
 
-
+    //byte(int) -> float
     private float[] parsingByteArrayToFloatArray(byte[] data){
         float[] parsingData = new float[data.length];
 
         for(int i=0; i<data.length; i++){
+            //**unsignd가 맞나...?
             parsingData[i] = (float)Byte.toUnsignedInt(data[i]);
         }
         return parsingData;
