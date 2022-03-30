@@ -24,3 +24,12 @@
 -output:3
         classification (n,s,v)
 -path : C:\sebin\lab\ecg2\git\ecg_data_wfdb\model\04\nsv_288
+
+
+540_model90
+-0320
+-two input / heavy model
+-90ep 
+-input : 540 (360 + 180)
+-output : 3 (aami _ n,s,v)
+-path = C:\sebin\lab\ecg2\git\ecg_data_wfdb\model\07_\0308\rDuration_Kfold40_80_sameData

@@ -279,7 +279,7 @@ public class BluetoothLeService extends Service {
         float[] parsingData = parsingByteArrayToFloatArray(sampleByte);
         float[] filterData = baseLineRemoveFiltering(parsingData);
 
-        int peakDetectionFlag = Byte.toUnsignedInt(data[DATA_LENGTH]);
+        int peakDetectionFlag = data[DATA_LENGTH];
 
         Intent intent = new Intent("BLE");
         intent.putExtra("SAMPLE",filterData);
@@ -384,6 +384,4 @@ public class BluetoothLeService extends Service {
         startForeground(1, builder1.build());
     }
 }
-
-
 

@@ -1,6 +1,6 @@
 <resources>
     <!--model setting-->
-    <integer name="modelInputShape">288</integer>
+    <integer name="modelInputShape">540</integer>
     <integer name="modelOutputShape">3</integer>
     <string-array name="AAMI_ANN">
         <item>N</item>
@@ -8,6 +8,12 @@
         <item>V</item>
         <item>F</item>
         <item>Q</item>
+    </string-array>
+
+    <string-array name="AAMI_NSV_ANN">
+        <item>N</item>
+        <item>S</item>
+        <item>V</item>
     </string-array>
 
     <string-array name="NSV_ANN">
@@ -39,7 +45,7 @@
     <integer name="data_length">60</integer>
     <!--BLE 양 추가-->
     <integer name="sampling_rate">360</integer>
-    <string name="period">0.0028</string>
+    <string name="period">0.00278</string>
 
     <!--PLOT LENGTH-->
     <integer name="all_plot_length">3600</integer>

@@ -40,6 +40,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Queue;
 
 public class EcgProcess extends Service {
@@ -104,6 +105,8 @@ public class EcgProcess extends Service {
     File segmentIndexFile;
     File windowFile;
 
+
+
     
 
     //ecg data(window)
@@ -122,12 +125,15 @@ public class EcgProcess extends Service {
     Queue<int[]> segmentPeakQueue = new LinkedList<>();
     Queue<HashMap<String,int[]>> segmentIndexQueue = new LinkedList<>();
 
-    //BPM
-    int prevRpeak;
+    //interval _ BPM
+    int prevRpeakIndex;
+        //predict input에 들어가는 interval들(1개, 10개)
+    float currentInterval1;
+    float currentInterval10;
+    float[] currentInterval10Array;
+        int currentInteval10Flag;
 
-
-
-
+    
 
 
 
@@ -167,7 +173,10 @@ public class EcgProcess extends Service {
         windowCnt = 0;
 
 
-        prevRpeak = 0;
+        prevRpeakIndex = 0;
+        currentInterval1 = 0;
+        currentInterval10Array = new float[10];
+            currentInteval10Flag = 0;
 
 
 
@@ -175,7 +184,7 @@ public class EcgProcess extends Service {
         INPUT_LENGTH = res.getInteger(R.integer.modelInputShape);
         OUTPUT_LENGTH = res.getInteger(R.integer.modelOutputShape);
         ANN = res.getStringArray(R.array.NSV_ANN);
-        interpreter = getTfliteInterpreter("360_model03_288.tflite");
+        interpreter = getTfliteInterpreter("540_model90.tflite");
 
 
         //notification
@@ -199,13 +208,16 @@ public class EcgProcess extends Service {
                 if(intent.getAction().equals("BLE")){
                     if( (intent.hasExtra("SAMPLE")) & (intent.hasExtra("PEAK_FLAG")) ){
                         float[] sample = intent.getFloatArrayExtra("SAMPLE");
-                        int peakFlag = intent.getIntExtra("PEAK_FLAG",-99);
-                        if( (sample!= null) & (peakFlag != -99)) {
+                        int peakFlag = intent.getIntExtra("PEAK_FLAG",-100);
+                        Log.d("뭐지",String.valueOf((peakFlag)));
+                        if( (sample!= null) & (peakFlag != -100)) {
                             Log.v(FORDEBUG_TAG,"WINDOW_CNT:"+String.valueOf(windowCnt));
+                            Log.v(FORDEBUG_TAG,"DATA_FLAG:"+String.valueOf(dataFlag));
                             setData(sample);
-                            if( peakFlag == 1){
+                            if( peakFlag != -128){
                                 //R피크 존재
-                                findPeak();
+                                Log.d("뭐지뭐지",String.valueOf((peakFlag)));
+                                getPeakIndex(peakFlag);
                             }
                             updateDataFlag();
                             getSegment();
@@ -305,20 +317,19 @@ public class EcgProcess extends Service {
 
     private void setData(float[] data){
         Log.v(FUNCTION_TAG,"user:setData()");
-        Log.d(FORDEBUG_TAG,String.valueOf(dataFlag));
+        //Log.d(FORDEBUG_TAG,String.valueOf(dataFlag));
         for(int i=0; i<DATA_LENGTH; i+=1){
-            int j = dataFlag+DATA_LENGTH+i;
+            int j = dataFlag+i;
             if(j<WINDOW_LENGTH){
-                Log.d(FORDEBUG_TAG,"초과x");
+                //Log.d(FORDEBUG_TAG,"초과x");
                 originalEcg[j] = data[i];
                 squareEcg[j] = data[i];
             }
             else{
                 originalEcg[i] = data[i];
-                Log.d(FORDEBUG_TAG,"초과O");
+                //Log.d(FORDEBUG_TAG,"초과O");
                 squareEcg[dataFlag+i] = data[i];
             }
-
         }
         setBleDataPlot(data);
     }
@@ -363,43 +374,43 @@ public class EcgProcess extends Service {
 
 
 
-    private void findPeak() {
-        Log.v(FUNCTION_TAG,"user:findPeak()");
-        int peakIndex = -1;
-        float peakValue = -99999;
+    private void getPeakIndex(int peakFlag) {
+        Log.v(FUNCTION_TAG,"user:getPeakIndex()");
 
-        if( checkPeakAvailableIndexsExcess() == true){
-            int startIndex = WINDOW_LENGTH - 60 ;
-            int endIndex = dataFlag + 60;
+        int peakWindowCnt = -1;
+        int peakIndex = 0;
 
-            for(int i = startIndex; i<WINDOW_LENGTH; i++){
-                if(peakValue < originalEcg[i]){
-                    peakIndex = i;
-                    peakValue = originalEcg[i];
-                }
+        if(peakFlag < 0 ){
+            //peak가 이전에 있을때
+            if(checkPeakAvailableIndexsExcess()){
+                Log.v("fortest1",String.valueOf(peakFlag));
+                peakWindowCnt = windowCnt - 1 ;
+                peakIndex = WINDOW_LENGTH + peakFlag ;
             }
-            for(int i = 0; i< endIndex; i++){
-                if(peakValue < originalEcg[i]){
-                    peakIndex = i;
-                    peakValue = originalEcg[i];
-                }
+            else{
+                Log.v("fortest2",String.valueOf(peakFlag));
+                peakWindowCnt = windowCnt;
+                peakIndex = dataFlag + peakFlag ;
             }
         }
         else{
-            int startIndex = dataFlag-60;
-            int endIndex = dataFlag+60;
+            Log.v("fortest3",String.valueOf(peakFlag));
+            //peak가 현재  존재
+            peakWindowCnt = windowCnt;
+            peakIndex = dataFlag + peakFlag;
 
-            for(int i = startIndex; i<endIndex; i++){
-                if(peakValue < originalEcg[i]){
-                    peakIndex = i;
-                    peakValue = originalEcg[i];
-                }
-            }
+            Log.v("fortestRpeak",String.valueOf(dataFlag + peakFlag));
         }
 
+        Log.i("forcheckfor_dataFlag",String.valueOf(dataFlag));
+        Log.i("forcheckfor_peakFlag:",String.valueOf(peakFlag));
+        Log.i("forcheckfor_peakIndex:",String.valueOf(peakIndex));;
+
+
+
         Log.i(SEGMENTATION_TAG,"PEAK!");
-        setPeakIndex(windowCnt,peakIndex);
-        setSegmentIndex(windowCnt, peakIndex);
+        setPeakIndex(peakWindowCnt,peakIndex);
+        setSegmentIndex(peakWindowCnt, peakIndex);
 
 
     }
@@ -479,15 +490,13 @@ public class EcgProcess extends Service {
     private void getSegment()  {
         Log.v(FUNCTION_TAG,"user:setSegment()");
         while(!segmentIndexQueue.isEmpty()){
-            Log.i(FORDEBUG_TAG,"QueueLength:"+String.valueOf(segmentIndexQueue.size()));
+            //Log.i(FORDEBUG_TAG,"QueueLength:"+String.valueOf(segmentIndexQueue.size()));
             int[] peak = segmentPeakQueue.peek();
             HashMap<String,int[]> index = segmentIndexQueue.peek();
-
-
             if(index.get("back")[0]==windowCnt){
-                Log.i(FORDEBUG_TAG,"getSegment() : 조건1:flag 확인");
+                //Log.i(FORDEBUG_TAG,"getSegment() : 조건1:flag 확인");
                 if(index.get("back")[2]<=dataFlag){
-                    Log.i(FORDEBUG_TAG,"getSegment() : 조건2");
+                    //Log.i(FORDEBUG_TAG,"getSegment() : 조건2");
                     //indexing
                     float[] frontEcg = Arrays.copyOfRange(originalEcg,
                             index.get("front")[1],
@@ -496,19 +505,19 @@ public class EcgProcess extends Service {
                             index.get("back")[1],
                             index.get("back")[2]);
 
-                    Log.i(FORDEBUG_TAG,"Front:"+ Arrays.toString(Arrays.copyOfRange(originalEcg,
-                            index.get("front")[1],
-                            index.get("front")[2])));
-                    Log.i(FORDEBUG_TAG,"Back:"+Arrays.toString(Arrays.copyOfRange(originalEcg,
-                            index.get("back")[1],
-                            index.get("back")[2])));
+                    //Log.i(FORDEBUG_TAG,"Front:"+ Arrays.toString(Arrays.copyOfRange(originalEcg,
+                    //        index.get("front")[1],
+                    //        index.get("front")[2])));
+                    //Log.i(FORDEBUG_TAG,"Back:"+Arrays.toString(Arrays.copyOfRange(originalEcg,
+                    //        index.get("back")[1],
+                     //       index.get("back")[2])));
 
                     float[] segmentEcg = new float[frontEcg.length+backEcg.length];
                     System.arraycopy(frontEcg,0,segmentEcg,0,frontEcg.length);
-                    Log.i(FORDEBUG_TAG,"ALL1:"+Arrays.toString(segmentEcg));
+                    //Log.i(FORDEBUG_TAG,"ALL1:"+Arrays.toString(segmentEcg));
 
                     System.arraycopy(backEcg,0,segmentEcg,frontEcg.length,backEcg.length);
-                    Log.i(FORDEBUG_TAG,"ALL2:"+Arrays.toString(segmentEcg));
+                    //Log.i(FORDEBUG_TAG,"ALL2:"+Arrays.toString(segmentEcg));
                     returnAllResult(peak,index,segmentEcg);
 
                     segmentPeakQueue.poll();
@@ -517,6 +526,11 @@ public class EcgProcess extends Service {
                 else{
                     break;
                 }
+            }
+            else if(index.get("back")[0]<windowCnt){
+                    Log.v("fortest","herererehrerhe!!!");
+                    segmentPeakQueue.poll();
+                    segmentIndexQueue.poll();
             }
             else{
                 break;
@@ -527,25 +541,34 @@ public class EcgProcess extends Service {
         private void returnAllResult(int[] peakIndex,HashMap<String,int[]> segmentIndex,float[] segment){
             Log.v(FUNCTION_TAG,"user:returnAllResult()");
 
-            //predict
-            float[] minMaxSegmentEcg = minMaxScale(segment);
-            Log.i("tensorflow실행",String.valueOf(minMaxSegmentEcg.length));
+            //interval
+            float interval = getInterval(peakIndex[1]);
+            setInterval(interval);
 
-            float[][] output = predict(minMaxSegmentEcg);
+            //predict
+            float[] inputEcg = minMaxScale(segment);
+            float[] inputInterval = getInputInterval();
+
+            Log.i(TENSORFLOW_TAG+"__INPUT_SAMPLE",String.valueOf(inputEcg.length));
+            Log.i(TENSORFLOW_TAG+"__INPUT_INTERVAL",Arrays.toString(inputInterval));
+
+            float[][] output = predict(inputEcg,inputInterval);
 
             //ann
             int flag = outputFlag(output);
             String predictAnn = outputAnn(flag);
+            Log.i(TENSORFLOW_TAG+"__resultFlag",String.valueOf(flag));
             //bpm
-            int bpm = getBpm(peakIndex[1]);
+            int bpm = getBpm(currentInterval1);
             //predictAccuracyCheck
             boolean accuracyCheck = predictAccuracyCheck(output[0][flag]);
 
 
+            //plot _ notification
             setNotification(bpm,predictAnn);
 
             setAllPeakPlot(peakIndex[1],accuracyCheck,flag);
-            setSegmentPeakPlot(minMaxSegmentEcg,accuracyCheck,bpm,predictAnn);
+            setSegmentPeakPlot(inputEcg,accuracyCheck,bpm,predictAnn);
 
             saveLocalSegmentIndex(peakIndex,segmentIndex,accuracyCheck,bpm,predictAnn);
         }
@@ -578,61 +601,112 @@ public class EcgProcess extends Service {
 
 
 
-            public int getBpm(int currentRpeak){
+            public float getInterval(int currentRpeakIndex){
                 Log.v(FUNCTION_TAG,"user:getBpm()");
                 float RR_interval = 0;
 
-                if(currentRpeak < prevRpeak){
-                    RR_interval = currentRpeak + (WINDOW_LENGTH-prevRpeak);
+                if(currentRpeakIndex < prevRpeakIndex){
+                    Log.v("FORTEST_넘김",String.valueOf(prevRpeakIndex));
+                    Log.v("FORTEST_넘김",String.valueOf(currentRpeakIndex));
+                    RR_interval = currentRpeakIndex + (WINDOW_LENGTH-prevRpeakIndex);
                 }
                 else{
-                    RR_interval = currentRpeak - prevRpeak;
+                    Log.v("FORTEST_안넘김",String.valueOf(prevRpeakIndex));
+                    Log.v("FORTEST_안넘김",String.valueOf(currentRpeakIndex));
+                    RR_interval = currentRpeakIndex - prevRpeakIndex;
                 }
 
                 RR_interval = RR_interval * PERIOD;
                 Log.i("RR INTERVAL",String.valueOf(RR_interval));
 
-                prevRpeak = currentRpeak;
+                prevRpeakIndex = currentRpeakIndex;
 
-                return (int)(60 / RR_interval);
+                return RR_interval;
             }
+                private void setInterval(float interval){
+                    //1
+                    currentInterval1 = interval;
+
+                    int flag = currentInteval10Flag;
+                    //10
+                    if(flag<10){
+                        currentInterval10Array[flag] = interval;
+
+                        flag += 1;
+                        currentInteval10Flag = flag;
+                    }
+                    else{
+                        for(int i=0; i<(10-1); i++){
+                            currentInterval10Array[i] = currentInterval10Array[i+1];
+                        }
+                        currentInterval10Array[currentInterval10Array.length-1] = interval;
+                    }
+                }
+                    private float[] getInputInterval(){
+                        float[] inputInterval = new float[2];
+                        inputInterval[0] = currentInterval1;
+
+                        float avgInterval = 0;
+                        for(int i=0; i<10; i++){
+                            avgInterval += currentInterval10Array[i];
+                        }
+                        avgInterval  /= 10;
+                        inputInterval[1] = avgInterval;
+
+                        return inputInterval;
+                    }
+
+                private int getBpm(float interval){
+                    return (int)(60 / interval);
+                }
 
 
 
-            private float[][] predict(float[] data){
+
+            private float[][] predict(float[] inputSample,float[] inputInterval){
                 Log.v(FUNCTION_TAG,"user:predict()");
 
-                float[][][] input = inputProcessing(data);
+                float[][][] inputSampleTensor = inputSampleProcessing(inputSample);
+                float[][] inputIntervalTensor = inputIntervalProcessing(inputInterval);
+
+                Object[] inputs = {inputSampleTensor,inputIntervalTensor};
                 float[][] output = new float[1][OUTPUT_LENGTH];
+                Map<Integer,Object> outputs = new HashMap<>();
+                outputs.put(0,output);
 
                 //Log.i(TENSORFLOW_TAG,Arrays.deepToString(output));
-                interpreter.run(input,output);
+                interpreter.runForMultipleInputsOutputs(inputs,outputs);
                 //Log.i(TENSORFLOW_TAG,Arrays.deepToString(output));
-
+                Log.i(TENSORFLOW_TAG+"__result", String.valueOf(Arrays.toString(output[0])));
                 return output;
             }
 
                 //to tensor input
-                private float[][][] inputProcessing(float[] data){
+                private float[][][] inputSampleProcessing(float[] data){
                     float[][][] input = new float[1][INPUT_LENGTH][1];
                     for(int i=0; i<data.length; i++){
                         input[0][i][0] = data[i];
                     }
                     return input;
                 }
-                //return high value index
-                private int outputFlag(float[][] output){
-                    float value = -1;
-                    int flag = 0;
-                    for(int i=0; i< output[0].length; i++){
-                        if(output[0][i]>=value){
-                            Log.i(TENSORFLOW_TAG,"upup");
-                            flag = i;
-                            value = output[0][i];
-                        }
-                    }
-                    return flag;
+                private float[][] inputIntervalProcessing(float[] data){
+                    float[][] input = new float[1][2];
+                    input[0][0] = currentInterval1;
+                    input[0][1] = currentInterval10;
+                    return input;
                 }
+            //return high value index
+            private int outputFlag(float[][] output){
+                float value = -1;
+                int flag = 0;
+                for(int i=0; i< output[0].length; i++){
+                    if(output[0][i]>=value){
+                        flag = i;
+                        value = output[0][i];
+                    }
+                }
+                return flag;
+            }
 
                 private String outputAnn(int flag){
                     return ANN[flag];
@@ -666,32 +740,6 @@ public class EcgProcess extends Service {
                     sendBroadcast(intent);
             }
 
-            public void setSegmentPeakPlot(int[] data,boolean predictAccuracyFlag,int bpm,String predict){
-                Log.v(FUNCTION_TAG,"user:segmentPlot()");
-                float[] reData = new float[data.length];
-                for (int i=0; i<data.length; i++) {
-                    reData[i] = (float)data[i];
-                }
-
-                Intent intent = new Intent("segmentation");
-                intent.putExtra("data",data);
-                if(predictAccuracyFlag){
-                    intent.putExtra("accuracy",true);
-                }
-                else{
-                    intent.putExtra("accuracy",false);
-                }
-                sendBroadcast(intent);
-
-                intent = null;
-                intent = new Intent("INFORMATION");
-                intent.putExtra("BPM",bpm);
-                intent.putExtra("PREDICT",predict);
-                //intent.putExtra("predict",predict);
-                sendBroadcast(intent);
-            }
-
-            
 
             public void setSegmentPeakPlot(float[] data,boolean predictAccuracyFlag,int bpm,String predict){
                 Log.v(FUNCTION_TAG,"user:segmentPlot()");
