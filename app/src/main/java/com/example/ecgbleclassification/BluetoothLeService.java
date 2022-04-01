@@ -252,6 +252,7 @@ public class BluetoothLeService extends Service {
             //Log.i(GATT_TAG,"GATT DATA NOTIFY");
 
             byte[] data = characteristic.getValue();
+            Log.i("for10bitCheck",String.valueOf(data.length));
             sendBleData(data);
             //sendBleDataTestUse_filter(data);
         }
@@ -272,64 +273,101 @@ public class BluetoothLeService extends Service {
 
     };
 
-
+    //ecg sample + r peak index 받을 때
     private void sendBleData(byte[] data){
-        byte[] sampleByte = new byte[DATA_LENGTH];
-        System.arraycopy(data,0,sampleByte,0,DATA_LENGTH);
-        float[] parsingData = parsingByteArrayToFloatArray(sampleByte);
-        float[] filterData = baseLineRemoveFiltering(parsingData);
+        //Log.d("blecheck",String.valueOf(data.length));
 
-        int peakDetectionFlag = data[DATA_LENGTH];
+        //!8bit/10bit parsing 설정
+        int[] parsingData = parsing10bitByteArrayToIntArray(data);
+
+        //ecg sample data
+        float[] sampleData = new float[parsingData.length-1];
+        for(int i=0; i<(sampleData.length); i++){
+            sampleData[i] = Float.valueOf(parsingData[i]);
+        }
+        float[] filterData = baseLineRemoveFiltering(sampleData);
+
+        //ecg peak data
+        int peakDetectionIndexBLE = parsingData[parsingData.length-1];
 
         Intent intent = new Intent("BLE");
-        intent.putExtra("SAMPLE",filterData);
-        intent.putExtra("PEAK_FLAG",peakDetectionFlag);
-
+        intent.putExtra("SAMPLE",sampleData);
+        intent.putExtra("PEAK_FLAG",(short)peakDetectionIndexBLE);
         sendBroadcast(intent);
 
     }
 
-    //*아직 수정 안함
+    //*filter확인용 ble test
     private void sendBleDataTestUse_filter(byte[] data){
-        Intent intent = new Intent("BLE");
+        int[] parsingData = parsing8bitByteArrayToIntArray(data);
 
-        float[] parsingData = parsingByteArrayToFloatArray(data);
-        float[] filterData = baseLineRemoveFiltering(parsingData);
-
+        //ecg sample data
+        float[] sampleData = new float[parsingData.length-1];
+        for(int i=0; i<sampleData.length-1; i++){
+            sampleData[i] = Float.valueOf(parsingData[i]);
+        }
+        float[] filterData = baseLineRemoveFiltering(sampleData);
 
         float[] allData = new float[parsingData.length*2];
         //복붙!!
-        System.arraycopy(parsingData,0,allData,0,parsingData.length);
+        System.arraycopy(sampleData,0,allData,0,sampleData.length);
         System.arraycopy(filterData,0,allData,parsingData.length,filterData.length);
+
+        Intent intent = new Intent("BLE");
         intent.putExtra("TestUse_filter",allData);
         sendBroadcast(intent);
 
     }
 
-    //byte(int) -> float
-    private float[] parsingByteArrayToFloatArray(byte[] data){
-        float[] parsingData = new float[data.length];
+    //nordic용 parsing
+    // byte(int_1byte) -> int
+    private int[] parsing8bitByteArrayToIntArray(byte[] data){
+        int[] parsingData = new int[data.length];
 
         for(int i=0; i<data.length; i++){
-            //**unsignd가 맞나...?
-            parsingData[i] = (float)Byte.toUnsignedInt(data[i]);
+            parsingData[i] = Byte.toUnsignedInt(data[i]);
         }
+
+        Log.i("forOsiloCheck",Arrays.toString(parsingData));
         return parsingData;
     }
 
+    //nordic용 parsing
+    //byte(int_2byte) -> int
+    private int[] parsing10bitByteArrayToIntArray(byte[] data){
+        int[] parsingData = new int[data.length/2];
+
+        int t = 0;
+        for(int i=0; i<(data.length)/2 -1; i=i+1){
+            parsingData[i] = ((((data[i*2+1] & 0xff) << 8) | (data[i*2] & 0xff)) & 0x03ff) ;
+            Log.i("forOsiloCheck_front",String.valueOf((data[i*2] & 0xff)));
+            Log.i("forOsiloCheck_back",String.valueOf((data[i*2+1] & 0xff)));
+            Log.i("forOsiloCheck_all",String.valueOf( parsingData[i] ));
+            t= i;
+        }
+
+        int flag = parsingData.length-1;
+
+
+        parsingData[flag] = ((((data[flag*2+1] & 0xff) << 8) | (data[flag*2] & 0xff)) );
+        Log.i("forOsiloCheck_index",String.valueOf((short)parsingData[flag]));
+        return parsingData;
+    }
+
+    //컴퓨터 ble 테스트용 parsing
     private float[] parsingStringCsvToFloatArray(byte[] data){
         String segmentStringEcg = new String(data);
         String [] sampleStringEcg = segmentStringEcg.split(",");
 
         float [] sampleFloatEcg = new float[DATA_LENGTH];
         for(int i=0; i<DATA_LENGTH; i++){
-            sampleFloatEcg[i] = Float.valueOf(sampleStringEcg[i]);
+            sampleFloatEcg[i] = Byte.toUnsignedInt(data[i]);
         }
         return sampleFloatEcg;
     }
 
 
-
+    //sample 필터링
     private float[] baseLineRemoveFiltering(float[] data){
         //Log.i("baselineRemove","check");
         double[] doubleData = new double[data.length];
@@ -345,7 +383,6 @@ public class BluetoothLeService extends Service {
             floatData[i] = (float) filterData[i];
 
         }
-
 
         return floatData;
     }
@@ -384,4 +421,6 @@ public class BluetoothLeService extends Service {
         startForeground(1, builder1.build());
     }
 }
+
+
 

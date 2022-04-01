@@ -21,6 +21,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
@@ -185,6 +186,14 @@ public class FragmentAllplot extends Fragment {
         chart.getDescription().setEnabled(false);
         chart.setTouchEnabled(true);
 
+        chart.getXAxis().setPosition(XAxis.XAxisPosition.BOTTOM);
+        chart.getAxisRight().setEnabled(false);
+        chart.getAxisLeft().setAxisMinimum(0);
+        chart.getAxisLeft().setAxisMaximum(1500);
+
+
+
+
 
 
         //x,y축 고정
@@ -204,6 +213,7 @@ public class FragmentAllplot extends Fragment {
 
         LineDataSet dataSet = new LineDataSet(chart_entry,"ECG");
         dataSet.setDrawCircles(false);
+        dataSet.setColor(getContext().getColor(R.color.ECG));
         dataSet.setLineWidth(2);
 
 
@@ -280,13 +290,12 @@ public class FragmentAllplot extends Fragment {
         else{
             return;
         }
-
-
     }
 
         private void chartUpdate(){
             chart.clear();
             LineDataSet dataSet = new LineDataSet(chart_entry,"ECG");
+            dataSet.setColor(getContext().getColor(R.color.ECG));
             dataSet.setDrawCircles(false);
             dataSet.setLineWidth(2);
             dataSet.setDrawIcons(true);
@@ -296,6 +305,7 @@ public class FragmentAllplot extends Fragment {
 
             LineData lineData = new LineData(chartSet);
             chart.setData(lineData);
+            chart.setMaxVisibleValueCount(3600);
 
             chart.invalidate();
         }

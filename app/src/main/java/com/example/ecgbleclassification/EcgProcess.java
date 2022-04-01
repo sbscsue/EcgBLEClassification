@@ -208,7 +208,7 @@ public class EcgProcess extends Service {
                 if(intent.getAction().equals("BLE")){
                     if( (intent.hasExtra("SAMPLE")) & (intent.hasExtra("PEAK_FLAG")) ){
                         float[] sample = intent.getFloatArrayExtra("SAMPLE");
-                        int peakFlag = intent.getIntExtra("PEAK_FLAG",-100);
+                        int peakFlag = intent.getShortExtra("PEAK_FLAG",(short)-100);
                         Log.d("뭐지",String.valueOf((peakFlag)));
                         if( (sample!= null) & (peakFlag != -100)) {
                             Log.v(FORDEBUG_TAG,"WINDOW_CNT:"+String.valueOf(windowCnt));
@@ -528,7 +528,6 @@ public class EcgProcess extends Service {
                 }
             }
             else if(index.get("back")[0]<windowCnt){
-                    Log.v("fortest","herererehrerhe!!!");
                     segmentPeakQueue.poll();
                     segmentIndexQueue.poll();
             }
@@ -793,10 +792,6 @@ public class EcgProcess extends Service {
 
 
 
-
-
-
-
     public void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager manager = getBaseContext().getSystemService(NotificationManager.class);
@@ -843,19 +838,6 @@ public class EcgProcess extends Service {
 
 
 
-
-
-
-
-    private int otherwindowFlag(int original){
-        if(original==0){
-            return 1;
-        }
-        else{
-            return 0;
-        }
-
-    }
 
 
     /*
