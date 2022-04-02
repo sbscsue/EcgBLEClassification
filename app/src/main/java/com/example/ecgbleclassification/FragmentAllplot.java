@@ -185,13 +185,14 @@ public class FragmentAllplot extends Fragment {
         chart.setBackgroundColor(Color.WHITE);
         chart.getDescription().setEnabled(false);
         chart.setTouchEnabled(true);
+        chart.setDragEnabled(false);
+
+
 
         chart.getXAxis().setPosition(XAxis.XAxisPosition.BOTTOM);
         chart.getAxisRight().setEnabled(false);
         chart.getAxisLeft().setAxisMinimum(0);
         chart.getAxisLeft().setAxisMaximum(1500);
-
-
 
 
 
@@ -285,6 +286,7 @@ public class FragmentAllplot extends Fragment {
             Entry entry = new Entry(x,y,icon);
             chart_entry.set(index,entry);
 
+
             chartUpdate();
         }
         else{
@@ -299,6 +301,7 @@ public class FragmentAllplot extends Fragment {
             dataSet.setDrawCircles(false);
             dataSet.setLineWidth(2);
             dataSet.setDrawIcons(true);
+            dataSet.setDrawValues(false);
             //https://weeklycoding.com/mpandroidchart-documentation/chartdata/
             ArrayList<ILineDataSet> chartSet = new ArrayList<ILineDataSet>();
             chartSet.add(dataSet);
