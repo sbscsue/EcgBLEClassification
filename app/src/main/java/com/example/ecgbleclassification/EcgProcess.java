@@ -54,6 +54,9 @@ public class EcgProcess extends Service {
     final String SEGMENTATION_TAG = "SEGMENT_CHECK";
     final String TENSORFLOW_TAG = "TENSORFLOW_CHECK";
 
+    final int INTERVALMAX = (int)6*3;
+    final float INTERVALMIN = (float)0.3;
+
 
 
 
@@ -77,10 +80,9 @@ public class EcgProcess extends Service {
     String[] ANN;
 
 
-
+    //android
     //other
     Resources res;
-
     //Broadcast Receiver
     Receiver receiver;
     //notification
@@ -117,21 +119,29 @@ public class EcgProcess extends Service {
     int dataFlag;
     int windowCnt;
 
-    //threshold
-    static int THRESHOLD_SET_CNT=5;
 
-
-    //segment_index
+    //queue(peak 발생시)
     Queue<int[]> segmentPeakQueue = new LinkedList<>();
     Queue<HashMap<String,int[]>> segmentIndexQueue = new LinkedList<>();
 
-    //interval _ BPM
+    //interval
     int prevRpeakIndex;
+
         //predict input에 들어가는 interval들(1개, 10개)
-    float currentInterval1;
-    float currentInterval10;
-    float[] currentInterval10Array;
-        int currentInteval10Flag;
+        float currentInterval1;
+            float[] currentInterval10Array;
+                int currentInteval10Flag;
+        float currentInterval10;
+
+        //noise
+        int noiseFlag; //-1일때 노이즈 1일때 정상
+        HashMap<String,int[]> noiseWindowIndex = new HashMap<>();
+
+            //slow Noise(이전 피크 저장)
+            int currentPeakFlag;
+            int[] currentPeakN = new int[INTERVALMAX];
+
+
 
     
 
@@ -172,7 +182,7 @@ public class EcgProcess extends Service {
         dataFlag = 0;
         windowCnt = 0;
 
-
+        noiseFlag = 1;
         prevRpeakIndex = 0;
         currentInterval1 = 0;
         currentInterval10Array = new float[10];
@@ -209,12 +219,29 @@ public class EcgProcess extends Service {
                     if( (intent.hasExtra("SAMPLE")) & (intent.hasExtra("PEAK_FLAG")) ){
                         float[] sample = intent.getFloatArrayExtra("SAMPLE");
                         int peakFlag = intent.getShortExtra("PEAK_FLAG",(short)-100);
-                        Log.d("뭐지",String.valueOf((peakFlag)));
+
                         if( (sample!= null) & (peakFlag != -100)) {
-                            Log.v(FORDEBUG_TAG,"WINDOW_CNT:"+String.valueOf(windowCnt));
-                            Log.v(FORDEBUG_TAG,"DATA_FLAG:"+String.valueOf(dataFlag));
+                            Log.v(FORDEBUG_TAG+"_WINDOW_CNT",String.valueOf(windowCnt));
+                            Log.v(FORDEBUG_TAG+"_DATA_FLAG",String.valueOf(dataFlag));
                             setData(sample);
-                            if( peakFlag != -128){
+                            Log.v(FORDEBUG_TAG+"_peakFlag",String.valueOf((peakFlag)));
+
+                            //peakflag 저장
+                            setPeakFlag(peakFlag);
+                            Log.i("fordebugNoise_FLAG:",String.valueOf(noiseFlag));
+                            if( peakFlag == -128) {
+                                //peakflag 확인
+                                Log.d("fordebugNoise_currentPeakN:",Arrays.toString(currentPeakN));
+                                if (noiseFlag == 1) {
+                                    //Log.i("fordebugInterval:",String.valueOf(checkPeakFlagSlow()));
+                                    if(checkPeakFlagSlow()==true){
+                                        Log.i("fordebugNoiseStart:","here!");
+                                        noiseFlag = -1;
+                                        setNoiseStartSlow();
+                                    }
+                                }
+                            }
+                            else if( peakFlag != -128){
                                 //R피크 존재
                                 Log.d("뭐지뭐지",String.valueOf((peakFlag)));
                                 getPeakIndex(peakFlag);
@@ -258,9 +285,48 @@ public class EcgProcess extends Service {
 
         initalizeLocalSave();
 
-
-
     }
+
+        private void setPeakFlag(int index){
+            int flag = currentPeakFlag;
+            if(currentPeakFlag<INTERVALMAX){
+                currentPeakN[flag] = index;
+                currentPeakFlag += 1;
+            }
+            else{
+                for(int i=0; i< INTERVALMAX-1; i++){
+                    currentPeakN[i] = currentPeakN[i+1];
+                }
+                currentPeakN[flag-1] = index;
+            }
+        }
+
+        private boolean checkPeakFlagSlow(){
+            if(currentPeakFlag==INTERVALMAX){
+                for(int i=0; i<INTERVALMAX; i++){
+                    if(currentPeakN[i]!=-128){
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        private void setNoiseStartSlow(){
+            Log.d(FORDEBUG_TAG+"_NOISE","SLOW START");
+            int[] startIndex = new int[2];
+            int window = windowCnt;
+            int index = dataFlag - (200 * INTERVALMAX);
+            if(index < 0){
+                window = windowCnt - 1;
+                index = WINDOW_LENGTH + index;
+            }
+            startIndex[0] = window;
+            startIndex[1] = index;
+
+            noiseWindowIndex.put("start",startIndex);
+        }
+
 
     private void initalizeLocalSave(){
         StringBuilder pathBuilder = new StringBuilder();
@@ -542,35 +608,86 @@ public class EcgProcess extends Service {
 
             //interval
             float interval = getInterval(peakIndex[1]);
-            setInterval(interval);
 
-            //predict
-            float[] inputEcg = minMaxScale(segment);
-            float[] inputInterval = getInputInterval();
+            if(interval<INTERVALMIN){
+                //interval 비정상
+                //noise 시작: 너무 빠른 peak 검출
+                if(noiseFlag == 1){
+                    Log.d(FORDEBUG_TAG+"_NOISE","FAST START");
+                    noiseFlag = -1;
+                    setNoiseStartFast();
+                }
+            }
+            else{
+                //interval 정상
+                if(noiseFlag == -1){
+                    //noise 끝 :저장
+                    //비정상 -> 정상
+                    Log.d(FORDEBUG_TAG+"_NOISE","END(SAVE)");
+                    noiseFlag = 1;
+                    //SAVE FUNCTION
 
-            Log.i(TENSORFLOW_TAG+"__INPUT_SAMPLE",String.valueOf(inputEcg.length));
-            Log.i(TENSORFLOW_TAG+"__INPUT_INTERVAL",Arrays.toString(inputInterval));
+                }
+                if(noiseFlag == 1){
+                    //정상 -> 정상
+                    Log.d("testInterval_Default",String.valueOf(noiseFlag));
+                    //predict
+                    setInterval(interval);
+                    float[] inputEcg = minMaxScale(segment);
+                    float[] inputInterval = getInputInterval();
 
-            float[][] output = predict(inputEcg,inputInterval);
+                    Log.i(TENSORFLOW_TAG+"__INPUT_SAMPLE",String.valueOf(inputEcg.length));
+                    Log.i(TENSORFLOW_TAG+"__INPUT_INTERVAL",Arrays.toString(inputInterval));
 
-            //ann
-            int flag = outputFlag(output);
-            String predictAnn = outputAnn(flag);
-            Log.i(TENSORFLOW_TAG+"__resultFlag",String.valueOf(flag));
-            //bpm
-            int bpm = getBpm(currentInterval1);
-            //predictAccuracyCheck
-            boolean accuracyCheck = predictAccuracyCheck(output[0][flag]);
+                    float[][] output = predict(inputEcg,inputInterval);
+
+                    //ann
+                    int flag = outputFlag(output);
+                    String predictAnn = outputAnn(flag);
+                    Log.i(TENSORFLOW_TAG+"__resultFlag",String.valueOf(flag));
+                    //bpm
+                    int bpm = getBpm(currentInterval1);
+                    //predictAccuracyCheck
+                    boolean accuracyCheck = predictAccuracyCheck(output[0][flag]);
 
 
-            //plot _ notification
-            setNotification(bpm,predictAnn);
+                    //plot _ notification
+                    setNotification(bpm,predictAnn);
 
-            setAllPeakPlot(peakIndex[1],accuracyCheck,flag);
-            setSegmentPeakPlot(inputEcg,accuracyCheck,bpm,predictAnn);
+                    setAllPeakPlot(peakIndex[1],accuracyCheck,flag);
+                    setSegmentPeakPlot(inputEcg,accuracyCheck,bpm,predictAnn);
 
-            saveLocalSegmentIndex(peakIndex,segmentIndex,accuracyCheck,bpm,predictAnn);
+                    saveLocalSegmentIndex(peakIndex,segmentIndex,accuracyCheck,bpm,predictAnn);
+                }
+
+            }
+
+
+
         }
+
+            private void setNoiseStartFast(){
+                int[] startIndex = new int[2];
+                startIndex[0] = windowCnt;
+                startIndex[1] = dataFlag-DATA_LENGTH;
+                noiseWindowIndex.put("start",startIndex);
+            }
+
+            private void setNoiseEnd(){
+                int[] endIndex = new int[2];
+                endIndex[0] = windowCnt;
+                endIndex[1] = dataFlag-DATA_LENGTH;
+                noiseWindowIndex.put("end",endIndex);
+
+                saveLocalNoise(noiseWindowIndex);
+
+                noiseWindowIndex.clear();
+            }
+
+                private void saveLocalNoise(HashMap<String, int[]> noiseWindowIndex){
+
+                }
+
 
             private float[] minMaxScale(float[] data){
                 float minValue=99999;
@@ -605,18 +722,14 @@ public class EcgProcess extends Service {
                 float RR_interval = 0;
 
                 if(currentRpeakIndex < prevRpeakIndex){
-                    Log.v("FORTEST_넘김",String.valueOf(prevRpeakIndex));
-                    Log.v("FORTEST_넘김",String.valueOf(currentRpeakIndex));
                     RR_interval = currentRpeakIndex + (WINDOW_LENGTH-prevRpeakIndex);
                 }
                 else{
-                    Log.v("FORTEST_안넘김",String.valueOf(prevRpeakIndex));
-                    Log.v("FORTEST_안넘김",String.valueOf(currentRpeakIndex));
                     RR_interval = currentRpeakIndex - prevRpeakIndex;
                 }
 
                 RR_interval = RR_interval * PERIOD;
-                Log.i("RR INTERVAL",String.valueOf(RR_interval));
+                Log.i("RR_INTERVAL",String.valueOf(RR_interval));
 
                 prevRpeakIndex = currentRpeakIndex;
 

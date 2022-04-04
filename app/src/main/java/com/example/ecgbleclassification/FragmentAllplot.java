@@ -281,7 +281,7 @@ public class FragmentAllplot extends Fragment {
             }
             float x = chart_entry.get(index).getX();
             float y =  chart_entry.get(index).getY();
-            Drawable icon = iconDrawable[predictAccNum][flag];
+            Drawable icon = iconDrawable[predictAccNum][annFlag];
 
             Entry entry = new Entry(x,y,icon);
             chart_entry.set(index,entry);

@@ -144,6 +144,16 @@ public class FragmentSegmentPlot extends Fragment {
         }
         Log.i("whywhy",String.valueOf(chart_entry.size()));
         data_set = new LineDataSet(chart_entry, "ECG");
+        data_set.setColor(getContext().getColor(R.color.ECG));
+        data_set.setDrawCircles(false);
+        data_set.setLineWidth(2);
+        data_set.setDrawIcons(true);
+        data_set.setDrawValues(false);
+        //https://weeklycoding.com/mpandroidchart-documentation/chartdata/
+        ArrayList<ILineDataSet> chartSet = new ArrayList<ILineDataSet>();
+        chartSet.add(data_set);
+
+
         chart_set.add(data_set);
         chart_data = new LineData(chart_set);
 
