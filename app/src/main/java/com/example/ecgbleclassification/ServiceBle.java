@@ -1,5 +1,6 @@
 package com.example.ecgbleclassification;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -17,6 +18,7 @@ import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.os.Binder;
 import android.os.Build;
@@ -27,20 +29,18 @@ import android.widget.Toast;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.stream.IntStream;
 import uk.me.berndporr.iirj.Butterworth;
 import uk.me.berndporr.iirj.ChebyshevI;
 
-public class BluetoothLeService extends Service {
+public class ServiceBle extends Service {
     //values
     final String SERVICE_TAG = "BLE_SERVICE_CHECK";
     final String GATT_TAG = "GATT_CHECK";
 
+    private boolean gattConnectionAvialble = false;
     private boolean gattConnectionState = false;
     private String mac_address;
     BluetoothDevice device;
@@ -72,15 +72,15 @@ public class BluetoothLeService extends Service {
 
 
 
-    public BluetoothLeService() {
+    public ServiceBle() {
 
     }
 
     IBinder serviceBinder = new BleBinder();
 
     class BleBinder extends Binder {
-        BluetoothLeService getService() {
-            return BluetoothLeService.this;
+        ServiceBle getService() {
+            return ServiceBle.this;
         }
     }
 
@@ -102,6 +102,19 @@ public class BluetoothLeService extends Service {
 
         manager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = manager.getAdapter();
+
+
+
+        //permision check
+        if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)
+                == PackageManager.PERMISSION_GRANTED) {
+            gattConnectionAvialble = true;
+
+        }
+        else{
+            gattConnectionAvialble = false;
+        }
+
 
         //chebyshevIFilter.highPass(2    ,400,3,3);
         chebyshevIFilter.bandPass(2,400,21,19,3);
@@ -167,30 +180,38 @@ public class BluetoothLeService extends Service {
     @SuppressLint("MissingPermission")
     //디바이스 등록안해놓고 접근할때 오류 !
     public void connect(){
-        Log.i(GATT_TAG,"CONNECT GATT SERVER");
-        if(gattConnectionState==false){
-            bluetoothGatt = device.connectGatt(this,true,gattCallback);
-            if(bluetoothGatt.connect()==true){
-                Log.i(GATT_TAG,"TRUE");
-                gattConnectionState = true;
-            }
-            else{
-                Log.i(GATT_TAG,"FALSE");
-                gattConnectionState = false;
+
+        if(gattConnectionAvialble == true){
+            Log.i(GATT_TAG,"CONNECT GATT SERVER");
+            if(gattConnectionState==false){
+                bluetoothGatt = device.connectGatt(this,true,gattCallback);
+                if(bluetoothGatt.connect()==true){
+                    Log.i(GATT_TAG,"TRUE");
+                    gattConnectionState = true;
+                }
+                else{
+                    Log.i(GATT_TAG,"FALSE");
+                    gattConnectionState = false;
+                }
             }
         }
+
     }
 
     @SuppressLint("MissingPermission")
     public void disconnect(){
-        Log.i(GATT_TAG,"DISCONNECT GATT SERVER");
-        if(gattConnectionState){
-            Log.i(GATT_TAG,"TRUE");
-            bluetoothGatt.disconnect();
-            bluetoothGatt.close();
-            gattConnectionState = false;
-            //stopService(intent);
+
+        if(gattConnectionAvialble == true){
+            Log.i(GATT_TAG,"DISCONNECT GATT SERVER");
+            if(gattConnectionState){
+                Log.i(GATT_TAG,"TRUE");
+                bluetoothGatt.disconnect();
+                bluetoothGatt.close();
+                gattConnectionState = false;
+                //stopService(intent);
+            }
         }
+
 
     }
 
@@ -287,12 +308,17 @@ public class BluetoothLeService extends Service {
         }
         float[] filterData = baseLineRemoveFiltering(sampleData);
 
+
         //ecg peak data
         int peakDetectionIndexBLE = parsingData[parsingData.length-1];
+
 
         Intent intent = new Intent("BLE");
         intent.putExtra("SAMPLE",sampleData);
         intent.putExtra("PEAK_FLAG",(short)peakDetectionIndexBLE);
+        //SEB(0624)
+        Log.i("0624_check_sample:",Arrays.toString(sampleData));
+        Log.i("0624_check_index:",String.valueOf((short)peakDetectionIndexBLE));
         sendBroadcast(intent);
 
     }
@@ -403,7 +429,7 @@ public class BluetoothLeService extends Service {
 
     //종료 안됨!
     void startForegroundService() {
-        Intent notificationIntent = new Intent(this, ScanActivity.class);
+        Intent notificationIntent = new Intent(this, ActivityBleScan.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
 
 

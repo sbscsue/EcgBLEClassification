@@ -43,7 +43,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 
-public class EcgProcess extends Service {
+public class ServiceEcgProcess extends Service {
     final String FUNCTION_TAG = "FUNCTION_CHECK";
     final String FORDEBUG_TAG = "FORDEBUG_TAG";
 
@@ -56,11 +56,6 @@ public class EcgProcess extends Service {
 
     final int INTERVALMAX = (int)6*3;
     final float INTERVALMIN = (float)0.3;
-
-
-
-
-
 
 
 
@@ -150,8 +145,8 @@ public class EcgProcess extends Service {
 
     IBinder serviceBinder = new EcgBinder();
     class EcgBinder extends Binder {
-       EcgProcess getService() {
-            return EcgProcess.this;
+       ServiceEcgProcess getService() {
+            return ServiceEcgProcess.this;
         }
     }
 

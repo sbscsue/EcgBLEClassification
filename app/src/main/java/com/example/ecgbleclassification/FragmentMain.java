@@ -14,7 +14,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 
@@ -27,11 +26,11 @@ public class FragmentMain extends Fragment {
 
 
 
-    private BluetoothLeService bleService;
+    private ServiceBle bleService;
     ServiceConnection conn = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            BluetoothLeService.BleBinder mb = (BluetoothLeService.BleBinder) service;
+            ServiceBle.BleBinder mb = (ServiceBle.BleBinder) service;
             //oncreate 실행
             bleService = mb.getService();
             if(bleService!=null){
@@ -76,7 +75,7 @@ public class FragmentMain extends Fragment {
 
         text_main1 = v.findViewById(R.id.main1_ConnectionState);
 
-        Intent intent = new Intent(getActivity(),BluetoothLeService.class);
+        Intent intent = new Intent(getActivity(), ServiceBle.class);
         getActivity().bindService(intent,conn, Context.BIND_AUTO_CREATE);
 
         if(bleService!=null){
@@ -94,7 +93,7 @@ public class FragmentMain extends Fragment {
         button_main2.setOnClickListener(new Button.OnClickListener(){
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(getActivity(),ScanActivity.class);
+                Intent intent = new Intent(getActivity(), ActivityBleScan.class);
                 startActivity(intent);
             }
         });
@@ -105,9 +104,7 @@ public class FragmentMain extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        if(bleService!=null){
-            text_main1.setText(String.valueOf(bleService.getConnectState()));
-        }
+
 
     }
 }

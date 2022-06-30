@@ -27,7 +27,7 @@ import java.util.Arrays;
 import java.util.List;
 
 
-public class FragmentSegmentPlot extends Fragment {
+public class FragmentPlotSegment extends Fragment {
     Resources res;
 
     //for debug
@@ -53,7 +53,7 @@ public class FragmentSegmentPlot extends Fragment {
 
 
 
-    public FragmentSegmentPlot() {
+    public FragmentPlotSegment() {
         // Required empty public constructor
     }
 

@@ -10,25 +10,22 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.ArrayAdapter;
-import android.widget.Toast;
+
 import java.util.ArrayList;
 
 
 
-public class ScanActivity extends AppCompatActivity {
+public class ActivityBleScan extends AppCompatActivity {
 
     BluetoothManager manager;
     BluetoothAdapter bluetoothAdapter;
@@ -37,11 +34,11 @@ public class ScanActivity extends AppCompatActivity {
     private static final long SCAN_PERIOD = 10000;
     boolean mScanning;
 
-    private BluetoothLeService bleService;
+    private ServiceBle bleService;
     ServiceConnection conn = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            BluetoothLeService.BleBinder mb = (BluetoothLeService.BleBinder) service;
+            ServiceBle.BleBinder mb = (ServiceBle.BleBinder) service;
             //oncreate 실행
             bleService = mb.getService();
             Log.i("check_service",bleService.toString());
@@ -74,7 +71,7 @@ public class ScanActivity extends AppCompatActivity {
 
         res = getResources();
 
-        Intent intent = new Intent(ScanActivity.this,BluetoothLeService.class);
+        Intent intent = new Intent(ActivityBleScan.this, ServiceBle.class);
         getApplicationContext().bindService(intent,conn,Context.BIND_AUTO_CREATE);
 
         handler = new Handler();

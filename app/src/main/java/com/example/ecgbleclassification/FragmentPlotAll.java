@@ -30,7 +30,7 @@ import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 import java.util.ArrayList;
 
 
-public class FragmentAllplot extends Fragment {
+public class FragmentPlotAll extends Fragment {
     Resources res;
     final String FUNCTION_TAG = "FUNCTION_CHECK";
     final String BIND_TAG = "BIND_CHECK";
@@ -60,14 +60,14 @@ public class FragmentAllplot extends Fragment {
     TextView predictView;
 
     //통신
-    EcgProcess ecgService;
+    ServiceEcgProcess ecgService;
     Receiver receiver;
     IntentFilter theFilter;
 
 
 
 
-    public FragmentAllplot() {
+    public FragmentPlotAll() {
         // Required empty public constructor
     }
 
@@ -77,7 +77,7 @@ public class FragmentAllplot extends Fragment {
             // 서비스와 연결되었을 때 호출되는 메서드
             // 서비스 객체를 전역변수로 저장
             Log.d(BIND_TAG,"CONNECT");
-            EcgProcess.EcgBinder mb = (EcgProcess.EcgBinder) service;
+            ServiceEcgProcess.EcgBinder mb = (ServiceEcgProcess.EcgBinder) service;
             ecgService = mb.getService();
 
             allPlot(ecgService.originalEcg);
@@ -105,7 +105,7 @@ public class FragmentAllplot extends Fragment {
         iconDrawable = getIconDrawable("NSV");
         Log.d(ICON_CHECK,iconDrawable[0][0].toString());
 
-        Intent intent = new Intent(getActivity(), EcgProcess.class);
+        Intent intent = new Intent(getActivity(), ServiceEcgProcess.class);
         getActivity().bindService(intent, conn, Context.BIND_AUTO_CREATE);
         Log.d(BIND_TAG,conn.toString());
 

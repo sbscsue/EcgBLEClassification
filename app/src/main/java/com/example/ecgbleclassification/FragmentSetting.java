@@ -13,6 +13,7 @@ public class FragmentSetting extends PreferenceFragmentCompat {
     SharedPreferences prefs;
 
 
+
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
         setPreferencesFromResource(R.xml.fragment_setting, rootKey);
@@ -31,8 +32,6 @@ public class FragmentSetting extends PreferenceFragmentCompat {
             if (key.equals("ecg")) {
                 Log.v(SETTING_TAG,"ecg");
             }
-
-
         }
     };
 
