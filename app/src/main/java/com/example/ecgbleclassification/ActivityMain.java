@@ -13,6 +13,7 @@ import android.bluetooth.BluetoothManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -52,6 +53,8 @@ public class ActivityMain extends AppCompatActivity {
     };
 
 
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -76,7 +79,6 @@ public class ActivityMain extends AppCompatActivity {
                     },
                     1);
         }
-
 
 
         intent1 = new Intent(ActivityMain.this, ServiceBle.class);
@@ -108,6 +110,8 @@ public class ActivityMain extends AppCompatActivity {
         if (!bluetoothAdapter.isEnabled()) {
             Toast.makeText(this, R.string.bluetooth_off, Toast.LENGTH_SHORT).show();
         }
+
+
 
 
         bottomNavigationView = (BottomNavigationView) findViewById(R.id.bottom_menu_bar);
@@ -142,6 +146,8 @@ public class ActivityMain extends AppCompatActivity {
 
                 }
         );
+
+
     }
 
     @Override

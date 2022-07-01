@@ -46,7 +46,7 @@ public class Fragment1_3_SegmentPlot extends Fragment {
 
 
     //receiver
-    Receiver receiver;
+    ReceiverData receiver;
     IntentFilter theFilter;
 
     public static Fragment1_3_SegmentPlot newInstance() {
@@ -73,7 +73,7 @@ public class Fragment1_3_SegmentPlot extends Fragment {
         theFilter.addAction("segmentation");
         theFilter.addAction("INFORMATION");
 
-        receiver = new Receiver(){
+        receiver = new ReceiverData(){
             @Override
             public void onReceive(Context context, Intent intent) {
                 super.onReceive(context, intent);

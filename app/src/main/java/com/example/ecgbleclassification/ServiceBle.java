@@ -40,7 +40,7 @@ public class ServiceBle extends Service {
     final String SERVICE_TAG = "BLE_SERVICE_CHECK";
     final String GATT_TAG = "GATT_CHECK";
 
-    private boolean gattConnectionAvialble = false;
+    private boolean gattConnectionAvailable = false;
     private boolean gattConnectionState = false;
     private String mac_address;
     BluetoothDevice device;
@@ -50,8 +50,6 @@ public class ServiceBle extends Service {
 
     //default
     private Resources res;
-
-    private NotificationManagerCompat notiManager;
 
     private SharedPreferences preferences;
     private SharedPreferences.Editor editor;
@@ -67,7 +65,6 @@ public class ServiceBle extends Service {
 
     Butterworth butterworthHightPassFilter = new Butterworth();
     Butterworth butterworthLowPassFilter = new Butterworth();
-
     ChebyshevI chebyshevIFilter = new ChebyshevI();
 
 
@@ -79,6 +76,7 @@ public class ServiceBle extends Service {
     IBinder serviceBinder = new BleBinder();
 
     class BleBinder extends Binder {
+
         ServiceBle getService() {
             return ServiceBle.this;
         }
@@ -94,8 +92,10 @@ public class ServiceBle extends Service {
         super.onCreate();
         Log.i(SERVICE_TAG,"CREATE SERVICE");
 
-        //DEFALT
+
         res = getResources();
+
+        //bluetooth
         DATA_LENGTH =  res.getInteger(R.integer.data_length);
         preferences = getSharedPreferences(getString(R.string.S_NAME),Context.MODE_PRIVATE);
         editor = preferences.edit();
@@ -104,35 +104,27 @@ public class ServiceBle extends Service {
         bluetoothAdapter = manager.getAdapter();
 
 
-
-        //permision check
+            //permision check
         if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)
                 == PackageManager.PERMISSION_GRANTED) {
-            gattConnectionAvialble = true;
+            gattConnectionAvailable = true;
 
         }
         else{
-            gattConnectionAvialble = false;
+            gattConnectionAvailable = false;
         }
 
 
+        firstConnectGatt();
+
+
+        //filter
         //chebyshevIFilter.highPass(2    ,400,3,3);
         chebyshevIFilter.bandPass(2,400,21,19,3);
 
         butterworthHightPassFilter.highPass(2,400,0.5);
         butterworthLowPassFilter.lowPass(3,400,40);
 
-
-
-        //계속 켜지게
-        //startForegroundService(intent);
-
-        //BLE
-        getDevice();
-        if(mac_address!=null) {
-            Log.i(SERVICE_TAG, "FISRT BLE CONNECT - SUCESS");
-            connect();
-        }
 
     }
 
@@ -146,7 +138,46 @@ public class ServiceBle extends Service {
     }
 
     //bluetooth
-    public void getDevice(){
+
+    public void firstConnectGatt(){
+        getDevice();
+        if(mac_address!=null) {
+            Log.i(SERVICE_TAG, "FISRT BLE CONNECT - SUCESS");
+            connect();
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    public void deviceChangeConnectGatt(BluetoothDevice device){
+        Log.i(SERVICE_TAG,"SET BLE DEVICE");
+
+        editor.putString(res.getString(R.string.S_BLUETOOTH),device.getAddress());
+        editor.commit();
+
+        disconnect();
+        getDevice();
+        connect();
+    }
+
+
+    public boolean getConnectState(){
+        return gattConnectionState;
+    }
+
+    private void setConnectState(boolean state){
+        gattConnectionState = state;
+        sendConnectState();
+    }
+        private void sendConnectState(){
+            Intent intent = new Intent();
+            intent.setAction("BLECONNECTION");
+            intent.putExtra("state",gattConnectionState);
+            sendBroadcast(intent);
+
+
+        }
+
+    private void getDevice(){
         Log.i(SERVICE_TAG,"GET BLE DEVICE");
 
         String check = null;
@@ -162,57 +193,42 @@ public class ServiceBle extends Service {
     }
 
     @SuppressLint("MissingPermission")
-    public void setDevice(BluetoothDevice device){
-        Log.i(SERVICE_TAG,"SET BLE DEVICE");
-
-        editor.putString(res.getString(R.string.S_BLUETOOTH),device.getAddress());
-        editor.commit();
-
-        disconnect();
-        getDevice();
-        connect();
-    }
-
-    public boolean getConnectState(){
-        return gattConnectionState;
-    }
-
-    @SuppressLint("MissingPermission")
     //디바이스 등록안해놓고 접근할때 오류 !
     public void connect(){
 
-        if(gattConnectionAvialble == true){
+        if(gattConnectionAvailable == true){
             Log.i(GATT_TAG,"CONNECT GATT SERVER");
-            if(gattConnectionState==false){
+            if(getConnectState()==false){
                 bluetoothGatt = device.connectGatt(this,true,gattCallback);
                 if(bluetoothGatt.connect()==true){
                     Log.i(GATT_TAG,"TRUE");
-                    gattConnectionState = true;
+                    setConnectState(true);
                 }
                 else{
                     Log.i(GATT_TAG,"FALSE");
-                    gattConnectionState = false;
+                    setConnectState(false);
                 }
             }
         }
+
+
+        Log.i("0701",String.valueOf(gattConnectionState));
 
     }
 
     @SuppressLint("MissingPermission")
     public void disconnect(){
-
-        if(gattConnectionAvialble == true){
+        if(gattConnectionAvailable == true){
             Log.i(GATT_TAG,"DISCONNECT GATT SERVER");
-            if(gattConnectionState){
+            if(getConnectState()){
                 Log.i(GATT_TAG,"TRUE");
                 bluetoothGatt.disconnect();
                 bluetoothGatt.close();
-                gattConnectionState = false;
+                setConnectState(false);
                 //stopService(intent);
             }
         }
-
-
+        Log.i("0701",String.valueOf(gattConnectionState));
     }
 
 
@@ -228,6 +244,7 @@ public class ServiceBle extends Service {
             Log.i(GATT_TAG,"GATT SERVER CONNECT CHANGE");
             if(newState==BluetoothProfile.STATE_DISCONNECTED){
                 Log.i(GATT_TAG,"GATT SERVER DISCONNECTED");
+                setConnectState(false);
             }
             if(newState==BluetoothProfile.STATE_CONNECTED){
                 Log.i(GATT_TAG,"GATT SERVER CONNECTED");
@@ -260,8 +277,6 @@ public class ServiceBle extends Service {
                             gatt.writeDescriptor(des);
                             break;
                         }
-
-
                     }
                 }
             }
@@ -293,6 +308,7 @@ public class ServiceBle extends Service {
         }
 
     };
+
 
     //ecg sample + r peak index 받을 때
     private void sendBleData(byte[] data){
@@ -414,38 +430,6 @@ public class ServiceBle extends Service {
     }
 
 
-
-
-    NotificationCompat.Builder builder1 = new NotificationCompat.Builder(this,"CONNECT_STATE")
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("ECG MONITORING DEVICE")
-            .setContentText("BLE NOT CONNECT");
-
-
-    NotificationCompat.Builder builder2 = new NotificationCompat.Builder(this,"CONNECT_STATE")
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("ECG MONITORING DEVICE")
-            .setContentText("BLE CONNECT");
-
-    //종료 안됨!
-    void startForegroundService() {
-        Intent notificationIntent = new Intent(this, ActivityBleScan.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
-
-
-        if (Build.VERSION.SDK_INT >= 26) {
-            String CHANNEL_ID = "CONNECT_STATE";
-
-            NotificationChannel channel = new NotificationChannel(CHANNEL_ID,
-                    "CONNECT STATE",
-                    NotificationManager.IMPORTANCE_DEFAULT);
-
-            ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE))
-                    .createNotificationChannel(channel);
-
-        }
-        startForeground(1, builder1.build());
-    }
 }
 
 

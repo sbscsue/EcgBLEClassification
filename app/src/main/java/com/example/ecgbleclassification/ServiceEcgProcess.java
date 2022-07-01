@@ -79,7 +79,7 @@ public class ServiceEcgProcess extends Service {
     //other
     Resources res;
     //Broadcast Receiver
-    Receiver receiver;
+    ReceiverData receiver;
     //notification
     NotificationManager notificationManager;
     Notification notification;
@@ -145,6 +145,8 @@ public class ServiceEcgProcess extends Service {
 
     IBinder serviceBinder = new EcgBinder();
     class EcgBinder extends Binder {
+
+
        ServiceEcgProcess getService() {
             return ServiceEcgProcess.this;
         }
@@ -206,7 +208,7 @@ public class ServiceEcgProcess extends Service {
         //broadcast receiver
         final IntentFilter theFilter = new IntentFilter();
         theFilter.addAction("BLE");
-        receiver = new Receiver(){
+        receiver = new ReceiverData(){
             @Override
             public void onReceive(Context context, Intent intent) {
                 super.onReceive(context, intent);

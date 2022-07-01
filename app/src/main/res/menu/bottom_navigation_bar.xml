@@ -3,20 +3,20 @@
         android:id="@+id/page_1"
         android:enabled="true"
         android:title="Device"
-        android:icon="@drawable/s1"/>
+        android:icon="@drawable/bottom1"/>
     <item
         android:id="@+id/page_2"
         android:enabled="true"
         android:title="Log"
-        android:icon="@drawable/s1"/>
+        android:icon="@drawable/bottom2"/>
     <item
         android:id="@+id/page_3"
         android:enabled="true"
         android:title="Report"
-        android:icon="@drawable/s1"/>
+        android:icon="@drawable/bottom3"/>
     <item
         android:id="@+id/page_4"
         android:enabled="true"
         android:title="Setting"
-        android:icon="@drawable/s1"/>
+        android:icon="@drawable/bottom4"/>
 </menu>

@@ -93,7 +93,7 @@ public class ActivityBleScan extends AppCompatActivity {
                 Log.d("click_device",deviceList.get(position));
 
                 BluetoothDevice device = bluetoothAdapter.getRemoteDevice(deviceList.get(position));
-                bleService.setDevice(device);
+                bleService.deviceChangeConnectGatt(device);
 
                 finish();
 

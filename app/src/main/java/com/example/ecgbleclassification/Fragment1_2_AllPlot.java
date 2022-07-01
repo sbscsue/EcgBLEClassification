@@ -61,7 +61,7 @@ public class Fragment1_2_AllPlot extends Fragment {
 
     //통신
     ServiceEcgProcess ecgService;
-    Receiver receiver;
+    ReceiverData receiver;
     IntentFilter theFilter;
 
 
@@ -81,10 +81,13 @@ public class Fragment1_2_AllPlot extends Fragment {
             // 서비스와 연결되었을 때 호출되는 메서드
             // 서비스 객체를 전역변수로 저장
             Log.d(BIND_TAG,"CONNECT");
-            ServiceEcgProcess.EcgBinder mb = (ServiceEcgProcess.EcgBinder) service;
-            ecgService = mb.getService();
 
-            allPlot(ecgService.originalEcg);
+            if(service.getClass().getSimpleName()=="EcgBinder") {
+                ServiceEcgProcess.EcgBinder mb = (ServiceEcgProcess.EcgBinder) service;
+                ecgService = mb.getService();
+
+                allPlot(ecgService.originalEcg);
+            }
         }
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
@@ -120,7 +123,7 @@ public class Fragment1_2_AllPlot extends Fragment {
         theFilter.addAction("INFORMATION");
 
 
-        receiver = new Receiver(){
+        receiver = new ReceiverData(){
             @Override
             public void onReceive(Context context, Intent intent) {
                 super.onReceive(context, intent);
@@ -248,6 +251,7 @@ public class Fragment1_2_AllPlot extends Fragment {
         super.onResume();
         requireActivity().registerReceiver(receiver,theFilter);
         if(ecgService!=null){
+            //안먹는중
             allPlot(ecgService.originalEcg);
         }
     }
