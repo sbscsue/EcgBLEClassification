@@ -7,7 +7,7 @@ import android.util.Log;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceManager;
 
-public class FragmentSetting extends PreferenceFragmentCompat {
+public class Fragment4_0_Setting extends PreferenceFragmentCompat {
     final String SETTING_TAG = "SETTING_CHECK";
 
     SharedPreferences prefs;

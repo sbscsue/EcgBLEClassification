@@ -4,8 +4,10 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 
 import android.Manifest;
+import android.app.ActionBar;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
 import android.content.ComponentName;
@@ -22,7 +24,7 @@ import android.widget.Toast;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
-public class Activity0 extends AppCompatActivity {
+public class ActivityMain extends AppCompatActivity {
 
     BottomNavigationView bottomNavigationView;
 
@@ -39,25 +41,23 @@ public class Activity0 extends AppCompatActivity {
             ServiceBle.BleBinder mb = (ServiceBle.BleBinder) service;
             //oncreate 실행
             bleService = mb.getService();
-            Log.i("check_service",bleService.toString());
-            Log.i("SERVICE_CHECK","CONNECT SERVICES");
+            Log.i("check_service", bleService.toString());
+            Log.i("SERVICE_CHECK", "CONNECT SERVICES");
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            Log.i("SERVICE_CHECK","DISCONNECT SERVICES");
+            Log.i("SERVICE_CHECK", "DISCONNECT SERVICES");
         }
     };
-
-
-
-
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        getSupportActionBar().hide();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             requestPermissions(
@@ -66,8 +66,6 @@ public class Activity0 extends AppCompatActivity {
                             Manifest.permission.BLUETOOTH_SCAN,
                             Manifest.permission.BLUETOOTH_ADVERTISE,
                             Manifest.permission.BLUETOOTH_CONNECT
-
-
                     },
                     1);
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -81,8 +79,7 @@ public class Activity0 extends AppCompatActivity {
 
 
 
-
-        intent1 = new Intent(Activity0.this, ServiceBle.class);
+        intent1 = new Intent(ActivityMain.this, ServiceBle.class);
         startService(intent1);
         //getApplicationContext().bindService(intent,conn, Context.BIND_AUTO_CREATE);
 
@@ -91,9 +88,9 @@ public class Activity0 extends AppCompatActivity {
         startService(intent2);
 
         FragmentManager fragmentManager = getSupportFragmentManager();
-        Fragment frag1 = new FragmentMain();
+        Fragment frag1 = new Fragment1_0_Main();
 
-        fragmentManager.beginTransaction().replace(R.id.fragment,frag1).commit();
+        fragmentManager.beginTransaction().replace(R.id.fragment, frag1).commit();
 
         manager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = manager.getAdapter();
@@ -113,35 +110,34 @@ public class Activity0 extends AppCompatActivity {
         }
 
 
-        bottomNavigationView = (BottomNavigationView)findViewById(R.id.bottom_menu_bar);
+        bottomNavigationView = (BottomNavigationView) findViewById(R.id.bottom_menu_bar);
         bottomNavigationView.setOnNavigationItemSelectedListener(
-                new BottomNavigationView.OnNavigationItemSelectedListener(){
+                new BottomNavigationView.OnNavigationItemSelectedListener() {
                     @Override
                     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-                        switch(item.getItemId()){
+                        switch (item.getItemId()) {
                             case R.id.page_1:
-                                fragmentManager.beginTransaction().replace(R.id.fragment,frag1).commit();
+                                fragmentManager.beginTransaction().replace(R.id.fragment, frag1).commit();
                                 return true;
 
                             case R.id.page_2:
-                                Fragment frag2 = new FragmentPlotAll();
-                                fragmentManager.beginTransaction().replace(R.id.fragment,frag2).commit();
+                                Fragment frag2 = new Fragment2_0_Log();
+                                fragmentManager.beginTransaction().replace(R.id.fragment, frag2).commit();
                                 return true;
 
                             case R.id.page_3:
-                                Fragment frag3 = new FragmentPlotSegment();
-                                fragmentManager.beginTransaction().replace(R.id.fragment,frag3).commit();
+                                Fragment frag3 = new Fragment3_0_DailyReport();
+                                fragmentManager.beginTransaction().replace(R.id.fragment, frag3).commit();
                                 return true;
 
                             case R.id.page_4:
-                                Fragment frag4 = new FragmentSetting();
-                                fragmentManager.beginTransaction().replace(R.id.fragment,frag4).commit();
+                                Fragment frag4 = new Fragment4_0_Setting();
+                                fragmentManager.beginTransaction().replace(R.id.fragment, frag4).commit();
                                 return true;
                         }
 
                         return false;
                     }
-
 
 
                 }
@@ -155,4 +151,11 @@ public class Activity0 extends AppCompatActivity {
         stopService(intent2);
     }
 
+
+    public void replaceFragment(Fragment fragment) {
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        fragmentTransaction.replace(R.id.fragment, fragment).commit();
+
+    }
 }

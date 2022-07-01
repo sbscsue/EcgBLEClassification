@@ -30,7 +30,7 @@ import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 import java.util.ArrayList;
 
 
-public class FragmentPlotAll extends Fragment {
+public class Fragment1_2_AllPlot extends Fragment {
     Resources res;
     final String FUNCTION_TAG = "FUNCTION_CHECK";
     final String BIND_TAG = "BIND_CHECK";
@@ -67,7 +67,11 @@ public class FragmentPlotAll extends Fragment {
 
 
 
-    public FragmentPlotAll() {
+    public static Fragment1_2_AllPlot newInstance() {
+        return new Fragment1_2_AllPlot();
+    }
+
+    public Fragment1_2_AllPlot() {
         // Required empty public constructor
     }
 
@@ -174,7 +178,7 @@ public class FragmentPlotAll extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_allplot, container, false);
+        View view = inflater.inflate(R.layout.fragment1_2_allplot, container, false);
         Log.d("checkcheck","onCreatView()");
 
 

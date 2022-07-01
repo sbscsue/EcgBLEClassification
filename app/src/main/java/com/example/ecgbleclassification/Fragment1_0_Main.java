@@ -17,48 +17,28 @@ import android.widget.Button;
 import android.widget.TextView;
 
 
-public class FragmentMain extends Fragment {
+public class Fragment1_0_Main extends Fragment {
 
-    Button button_main1;
-    TextView text_main1;
+    Button button1;
+    Button button2;
+    Button button3;
 
-    Button button_main2;
-
-
-
-    private ServiceBle bleService;
-    ServiceConnection conn = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            ServiceBle.BleBinder mb = (ServiceBle.BleBinder) service;
-            //oncreate 실행
-            bleService = mb.getService();
-            if(bleService!=null){
-                Log.i("method","onServiceConnected");
-            }
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            Log.i("SERVICE_CHECK","DISCONNECT SERVICES");
-        }
-    };
+    TextView text1;
 
 
+    ServiceBle bleService;
 
-    public FragmentMain() {
-        // Required empty public constructor
+    public static Fragment1_0_Main newInstance() {
+        return new Fragment1_0_Main();
     }
 
-
+    public Fragment1_0_Main() {
+        // Required empty public constructor
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-
-
-
     }
 
     @Override
@@ -66,7 +46,7 @@ public class FragmentMain extends Fragment {
                              Bundle savedInstanceState) {
 
 
-
+        /*
         View v = inflater.inflate(R.layout.fragment_main, container, false);
 
         button_main1 = v.findViewById(R.id.main1_Connect);
@@ -99,6 +79,49 @@ public class FragmentMain extends Fragment {
         });
 
        return v;
+
+         */
+
+        View v = inflater.inflate(R.layout.fragment1_0_main, container, false);
+
+
+
+        text1 = v.findViewById(R.id.fragment1_card1_1_connction);
+
+
+        //text1.setText(String.valueOf(bleService.getConnectState()));
+
+        button1 = v.findViewById(R.id.fragment1_button1);
+        button2 = v.findViewById(R.id.fragment1_button2);
+        button3 = v.findViewById(R.id.fragment1_button3);
+
+        button1.setOnClickListener(new Button.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getActivity(), ActivityBleScan.class);
+                startActivity(intent);
+            }
+        });
+
+        button2.setOnClickListener(new Button.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                ((ActivityMain)getActivity()).replaceFragment(Fragment1_2_AllPlot.newInstance());
+
+            }
+        });
+
+        button3.setOnClickListener(new Button.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                ((ActivityMain)getActivity()).replaceFragment(Fragment1_3_SegmentPlot.newInstance());
+            }
+        });
+
+
+
+
+        return v;
     }
 
     @Override

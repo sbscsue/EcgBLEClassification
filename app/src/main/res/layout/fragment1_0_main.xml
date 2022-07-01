@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:layout_marginHorizontal="15dp"
+    >
+
+
+
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="2"
+        android:orientation="vertical">
+
+
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="3"
+
+        android:orientation="horizontal"
+
+        android:layout_marginBottom="15dp"
+        >
+
+
+        <com.google.android.material.card.MaterialCardView
+
+            android:id="@+id/fragment1_card1"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+
+            android:clickable="true"
+            android:focusable="true"
+            android:checkable="true">
+
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="BLE Connection State"/>
+
+                <TextView
+                    android:id="@+id/fragment1_card1_1_connction"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="false"/>
+
+            </LinearLayout>
+
+
+
+        </com.google.android.material.card.MaterialCardView>
+
+
+        <Button
+            android:id="@+id/fragment1_button1"
+
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+
+
+            android:text="BLE CONNECT"
+            />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="3"
+
+        android:orientation="vertical"
+
+        android:layout_marginBottom="15dp"
+        >
+
+
+
+        <Button
+            android:id="@+id/fragment1_button2"
+
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+
+            android:text="ALL PLOT"
+            />
+
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="3"
+
+        android:orientation="vertical"
+
+        android:layout_marginBottom="15dp"
+        >
+
+
+        <Button
+            android:id="@+id/fragment1_button3"
+
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+
+            android:text="SEGMENT PLOT"
+            />
+
+    </LinearLayout>
+
+
+
+
+
+
+
+</LinearLayout>

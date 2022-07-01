@@ -16,18 +16,16 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.github.mikephil.charting.charts.LineChart;
-import com.github.mikephil.charting.charts.PieRadarChartBase;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 
-public class FragmentPlotSegment extends Fragment {
+public class Fragment1_3_SegmentPlot extends Fragment {
     Resources res;
 
     //for debug
@@ -51,9 +49,11 @@ public class FragmentPlotSegment extends Fragment {
     Receiver receiver;
     IntentFilter theFilter;
 
+    public static Fragment1_3_SegmentPlot newInstance() {
+        return new Fragment1_3_SegmentPlot();
+    }
 
-
-    public FragmentPlotSegment() {
+    public Fragment1_3_SegmentPlot() {
         // Required empty public constructor
     }
 
@@ -97,7 +97,7 @@ public class FragmentPlotSegment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_segment_plot, container, false);
+        View view = inflater.inflate(R.layout.fragment1_3_segment_plot, container, false);
 
         debug_cnt = 0;
         cntView = view.findViewById(R.id.segmentIndex);

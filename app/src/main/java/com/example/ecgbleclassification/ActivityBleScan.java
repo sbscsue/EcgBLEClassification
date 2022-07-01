@@ -34,6 +34,17 @@ public class ActivityBleScan extends AppCompatActivity {
     private static final long SCAN_PERIOD = 10000;
     boolean mScanning;
 
+
+    Resources res;
+
+
+    Button scanButton;
+    ListView ScanListView;
+
+    ArrayList<String> deviceList;
+    ArrayAdapter<String> adpater;
+
+
     private ServiceBle bleService;
     ServiceConnection conn = new ServiceConnection() {
         @Override
@@ -52,32 +63,17 @@ public class ActivityBleScan extends AppCompatActivity {
     };
 
 
-    Resources res;
-
-
-    Button scanButton;
-    ListView ScanListView;
-
-    ArrayList<String> deviceList;
-    ArrayAdapter<String> adpater;
-
-
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.scanner);
+        setContentView(R.layout.fragment1_1_scanner);
 
         res = getResources();
 
         Intent intent = new Intent(ActivityBleScan.this, ServiceBle.class);
         getApplicationContext().bindService(intent,conn,Context.BIND_AUTO_CREATE);
-
-        handler = new Handler();
-
-
-
 
 
         deviceList = new ArrayList<String>();
@@ -87,6 +83,7 @@ public class ActivityBleScan extends AppCompatActivity {
         bluetoothAdapter = manager.getAdapter();
 
 
+        handler = new Handler();
 
         ScanListView = findViewById(R.id.ScansList);
         ScanListView.setAdapter(adpater);
@@ -95,12 +92,10 @@ public class ActivityBleScan extends AppCompatActivity {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Log.d("click_device",deviceList.get(position));
 
-
                 BluetoothDevice device = bluetoothAdapter.getRemoteDevice(deviceList.get(position));
                 bleService.setDevice(device);
 
                 finish();
-
 
             }
         });
@@ -119,7 +114,6 @@ public class ActivityBleScan extends AppCompatActivity {
 
 
     }
-
 
     private BluetoothAdapter.LeScanCallback leScanCallback = new BluetoothAdapter.LeScanCallback() {
         @Override
