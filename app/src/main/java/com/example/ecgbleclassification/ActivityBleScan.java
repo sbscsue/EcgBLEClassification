@@ -85,6 +85,19 @@ public class ActivityBleScan extends AppCompatActivity {
 
         handler = new Handler();
 
+
+
+        scanButton = findViewById(R.id.ScanButton);
+        scanButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                deviceList.clear();
+                scanLeDevice(true);
+            }
+
+        });
+
+
         ScanListView = findViewById(R.id.ScansList);
         ScanListView.setAdapter(adpater);
         ScanListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -99,20 +112,6 @@ public class ActivityBleScan extends AppCompatActivity {
 
             }
         });
-
-        scanButton = findViewById(R.id.ScanButton);
-        scanButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                deviceList.clear();
-                scanLeDevice(true);
-            }
-
-        });
-
-
-
-
     }
 
     private BluetoothAdapter.LeScanCallback leScanCallback = new BluetoothAdapter.LeScanCallback() {

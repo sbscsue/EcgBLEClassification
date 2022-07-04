@@ -284,6 +284,23 @@ public class ServiceEcgProcess extends Service {
 
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        Log.v(FUNCTION_TAG,"lifeCycle:onDesctroy()");
+
+        unregisterReceiver(receiver);
+
+        endTime = LocalDateTime.now();
+        try {
+            timestampLocalSave(endTime);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        stopForeground(true);
+    }
+
+        //인터벌 그쪽
         private void setPeakFlag(int index){
             int flag = currentPeakFlag;
             if(currentPeakFlag<INTERVALMAX){
@@ -298,6 +315,7 @@ public class ServiceEcgProcess extends Service {
             }
         }
 
+        //뭐냐 이건 (noise 그건 듯)
         private boolean checkPeakFlagSlow(){
             if(currentPeakFlag==INTERVALMAX){
                 for(int i=0; i<INTERVALMAX; i++){
@@ -340,21 +358,7 @@ public class ServiceEcgProcess extends Service {
     }
 
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        Log.v(FUNCTION_TAG,"lifeCycle:onDesctroy()");
 
-        unregisterReceiver(receiver);
-
-        endTime = LocalDateTime.now();
-        try {
-            timestampLocalSave(endTime);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        stopForeground(true);
-    }
 
         private void timestampLocalSave(LocalDateTime endTime) throws IOException {
             Log.v(FUNCTION_TAG,"user:timestampLocalSave");
@@ -445,19 +449,23 @@ public class ServiceEcgProcess extends Service {
 
         if(peakFlag < 0 ){
             //peak가 이전에 있을때
-            if(checkPeakAvailableIndexsExcess()){
+            if(checkPeakAvailableIndexsExcess(peakFlag)){
                 Log.v("fortest1",String.valueOf(peakFlag));
+                Log.i("0704_log1_previous",String.valueOf(peakFlag));
                 peakWindowCnt = windowCnt - 1 ;
                 peakIndex = WINDOW_LENGTH + peakFlag ;
             }
             else{
+                //여기만 동작중  ?
                 Log.v("fortest2",String.valueOf(peakFlag));
+                Log.i("0704_log1_nex",String.valueOf(peakFlag));
                 peakWindowCnt = windowCnt;
                 peakIndex = dataFlag + peakFlag ;
             }
         }
         else{
             Log.v("fortest3",String.valueOf(peakFlag));
+            Log.i("0704_log1_current",String.valueOf(peakFlag));
             //peak가 현재  존재
             peakWindowCnt = windowCnt;
             peakIndex = dataFlag + peakFlag;
@@ -465,9 +473,9 @@ public class ServiceEcgProcess extends Service {
             Log.v("fortestRpeak",String.valueOf(dataFlag + peakFlag));
         }
 
-        Log.i("forcheckfor_dataFlag",String.valueOf(dataFlag));
-        Log.i("forcheckfor_peakFlag:",String.valueOf(peakFlag));
-        Log.i("forcheckfor_peakIndex:",String.valueOf(peakIndex));;
+        Log.i("0704_log1_dataFlag",String.valueOf(dataFlag));
+        Log.i("0704_log1_peakFlag:",String.valueOf(peakFlag));
+        Log.i("0704_log1_peakIndex:",String.valueOf(peakIndex));;
 
 
 
@@ -477,8 +485,8 @@ public class ServiceEcgProcess extends Service {
 
 
     }
-        private boolean checkPeakAvailableIndexsExcess(){
-            if(dataFlag==0){
+        private boolean checkPeakAvailableIndexsExcess(int peakFlag){
+            if(dataFlag+peakFlag<0){
                 return true;
             }
             else{
