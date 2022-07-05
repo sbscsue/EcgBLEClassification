@@ -19,10 +19,14 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.SimpleAdapter;
 import android.widget.ArrayAdapter;
 
-import java.util.ArrayList;
 
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 
 
 public class ActivityBleScan extends AppCompatActivity {
@@ -41,8 +45,8 @@ public class ActivityBleScan extends AppCompatActivity {
     Button scanButton;
     ListView ScanListView;
 
-    ArrayList<String> deviceList;
-    ArrayAdapter<String> adpater;
+    ArrayList<HashMap<String,String>> deviceList;
+    SimpleAdapter adpater;
 
 
     private ServiceBle bleService;
@@ -76,14 +80,11 @@ public class ActivityBleScan extends AppCompatActivity {
         getApplicationContext().bindService(intent,conn,Context.BIND_AUTO_CREATE);
 
 
-        deviceList = new ArrayList<String>();
-        adpater = new ArrayAdapter<String>(this, R.layout.layout ,R.id.textview, deviceList);
-
         manager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = manager.getAdapter();
 
-
         handler = new Handler();
+
 
 
 
@@ -98,14 +99,27 @@ public class ActivityBleScan extends AppCompatActivity {
         });
 
 
+        String [] tag = new String[2];
+        tag[0] = "name";
+        tag[1] = "mac";
+
+        Log.i("0704", Arrays.toString(tag));
+
+        int[] id = new int[2];
+        id[0] = R.id.scan_adapter_text1;
+        id[1] = R.id.scan_adapter_text2;
+
+        deviceList = new ArrayList<HashMap<String, String>>();
+        adpater = new SimpleAdapter(this, deviceList,R.layout.adapter_view ,new String[]{"name","mac"},id);
+
         ScanListView = findViewById(R.id.ScansList);
         ScanListView.setAdapter(adpater);
         ScanListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Log.d("click_device",deviceList.get(position));
+                Log.d("click_device",deviceList.get(position).get("mac"));
 
-                BluetoothDevice device = bluetoothAdapter.getRemoteDevice(deviceList.get(position));
+                BluetoothDevice device = bluetoothAdapter.getRemoteDevice(deviceList.get(position).get("mac"));
                 bleService.deviceChangeConnectGatt(device);
 
                 finish();
@@ -115,11 +129,24 @@ public class ActivityBleScan extends AppCompatActivity {
     }
 
     private BluetoothAdapter.LeScanCallback leScanCallback = new BluetoothAdapter.LeScanCallback() {
+        @SuppressLint("MissingPermission")
         @Override
         public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
-            if(!deviceList.contains(device.getAddress())){
-                deviceList.add(device.getAddress());
+            HashMap<String,String> item = new HashMap<>();
+            if(device.getName()==null){
+                item.put("name","N/A");
+            }
+            else{
+                item.put("name",device.getName());
+            }
+
+            item.put("mac",device.getAddress());
+
+            if(!deviceList.contains(item)){
+                deviceList.add(item);
+                //Log.d("bluetoothenable",device.getName());
                 Log.d("bluetoothenable",device.getAddress());
+
                 adpater.notifyDataSetChanged();
             }
         }

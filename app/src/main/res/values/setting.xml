@@ -60,6 +60,10 @@
     <!-- SharedPreference Key value for app setting -->
     <string name="S_NAME">APP_SETTING</string>
     <string name="S_BLUETOOTH">"MAC_ADDRESS"</string>
+    <string name="S_BLUETOOTH_CONNECTION_STATE">"CONNECTION"</string>
+
+    <string name="NOTIFICATION">"TopNotification"</string>
+
 
 
 

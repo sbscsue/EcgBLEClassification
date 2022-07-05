@@ -166,16 +166,21 @@ public class ServiceBle extends Service {
 
     private void setConnectState(boolean state){
         gattConnectionState = state;
+        editor.putBoolean(res.getString(R.string.S_BLUETOOTH_CONNECTION_STATE),state);
+        editor.commit();
+
+        Log.i("0705_check3",String.valueOf(state));
+        Log.i("0705_check3",String.valueOf(preferences.getBoolean(getString(R.string.S_BLUETOOTH_CONNECTION_STATE),false)));
         sendConnectState();
+
+
     }
         private void sendConnectState(){
             Intent intent = new Intent();
             intent.setAction("BLECONNECTION");
-            intent.putExtra("state",gattConnectionState);
             sendBroadcast(intent);
-
-
         }
+
 
     private void getDevice(){
         Log.i(SERVICE_TAG,"GET BLE DEVICE");
@@ -244,12 +249,16 @@ public class ServiceBle extends Service {
             Log.i(GATT_TAG,"GATT SERVER CONNECT CHANGE");
             if(newState==BluetoothProfile.STATE_DISCONNECTED){
                 Log.i(GATT_TAG,"GATT SERVER DISCONNECTED");
+                Log.i("0705_check2","disconnection");
                 setConnectState(false);
             }
             if(newState==BluetoothProfile.STATE_CONNECTED){
                 Log.i(GATT_TAG,"GATT SERVER CONNECTED");
+                Log.i("0705_check2","connection");
+                setConnectState(true);
                 gatt.discoverServices();
             }
+
         }
 
         @SuppressLint("MissingPermission")

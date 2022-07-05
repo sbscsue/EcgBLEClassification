@@ -5,9 +5,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
+import androidx.preference.PreferenceManager;
 
 import android.os.IBinder;
 import android.util.Log;
@@ -27,6 +29,8 @@ public class Fragment1_0_Main extends Fragment {
     TextView text1;
 
     ServiceBle bleService;
+
+    SharedPreferences preferences;
     ReceiverBleConnection receiver;
     IntentFilter theFilter;
 
@@ -83,11 +87,13 @@ public class Fragment1_0_Main extends Fragment {
 
         View v = inflater.inflate(R.layout.fragment1_0_main, container, false);
 
+        preferences = getContext().getSharedPreferences(getString(R.string.S_NAME),Context.MODE_PRIVATE);
 
-
-
-
+        boolean state = preferences.getBoolean(getString(R.string.S_BLUETOOTH_CONNECTION_STATE),false);
+        Log.i("0705_check3?",String.valueOf(preferences.getBoolean(getString(R.string.S_BLUETOOTH_CONNECTION_STATE),false)));
         text1 = v.findViewById(R.id.fragment1_card1_1_connction);
+        text1.setText(String.valueOf(state));
+
 
 
 
@@ -100,7 +106,7 @@ public class Fragment1_0_Main extends Fragment {
                 super.onReceive(context, intent);
                 if(intent.getAction().equals("BLECONNECTION")){
                     Log.i("0701","BLECONNECTION_RECEIVE");
-                    Boolean state = intent.getBooleanExtra("state",false);
+                    boolean state = preferences.getBoolean(getString(R.string.S_BLUETOOTH_CONNECTION_STATE),false);
 
                     Log.i("0701",String.valueOf(state));
                     text1.setText(String.valueOf(state));

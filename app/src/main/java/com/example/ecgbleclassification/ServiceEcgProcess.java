@@ -7,6 +7,7 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.res.AssetFileDescriptor;
 import android.content.res.Resources;
 import android.os.Binder;
@@ -17,6 +18,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
+import androidx.preference.PreferenceManager;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -81,6 +83,8 @@ public class ServiceEcgProcess extends Service {
     //Broadcast Receiver
     ReceiverData receiver;
     //notification
+    SharedPreferences prefs;
+    SharedPreferences.Editor editor;
     NotificationManager notificationManager;
     Notification notification;
 
@@ -195,14 +199,23 @@ public class ServiceEcgProcess extends Service {
 
 
         //notification
-        createNotificationChannel();
-        notificationManager = getBaseContext().getSystemService(NotificationManager.class);
-        notification = new NotificationCompat.Builder(this, "EcgProcess")
-                .setContentTitle("EcgStatus")
-                .setContentText("--------")
-                .setSmallIcon(R.mipmap.ic_launcher).build();
+        prefs = PreferenceManager.getDefaultSharedPreferences(this);
 
-        startForeground(1,notification);
+        Log.i("0705_check1",String.valueOf(prefs.getBoolean("TopNotification",true)));
+        if(prefs.getBoolean("TopNotification",true)==true){
+            createNotificationChannel();
+            notificationManager = getBaseContext().getSystemService(NotificationManager.class);
+            notification = new NotificationCompat.Builder(this, "EcgProcess")
+                    .setContentTitle("EcgStatus")
+                    .setContentText("--------")
+                    .setSmallIcon(R.mipmap.ic_launcher).build();
+
+            startForeground(1,notification);
+
+        }
+
+
+
 
 
         //broadcast receiver
@@ -657,7 +670,9 @@ public class ServiceEcgProcess extends Service {
 
 
                     //plot _ notification
-                    setNotification(bpm,predictAnn);
+                    if(prefs.getBoolean("TopNotification",true)==true) {
+                        setNotification(bpm, predictAnn);
+                    }
 
                     setAllPeakPlot(peakIndex[1],accuracyCheck,flag);
                     setSegmentPeakPlot(inputEcg,accuracyCheck,bpm,predictAnn);
