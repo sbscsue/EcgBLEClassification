@@ -1,0 +1,41 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+
+    <PreferenceCategory
+        app:key="DefaultCategory"
+        app:title="일반">
+
+        <CheckBoxPreference
+            android:key="TopNotification"
+            android:title="상단바 위젯"
+            android:defaultValue="true" />
+
+    </PreferenceCategory>
+
+
+    <PreferenceCategory
+        app:key="AboutCategory"
+        app:title="About"/>
+
+    <Preference
+        android:key="Github"
+        android:title="Git hub"
+        android:summary="클릭 시 이동 "
+
+        android:selectAllOnFocus="true"
+        android:singleLine="true" />
+
+
+    <Preference
+        android:key="Mail"
+        android:title="Mail"
+        android:summary="sbscsue@gmail.com"
+        android:selectAllOnFocus="true"
+         />
+
+
+
+
+
+</PreferenceScreen>
