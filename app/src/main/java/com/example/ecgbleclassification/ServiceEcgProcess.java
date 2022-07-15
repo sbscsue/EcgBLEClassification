@@ -195,7 +195,8 @@ public class ServiceEcgProcess extends Service {
         INPUT_LENGTH = res.getInteger(R.integer.modelInputShape);
         OUTPUT_LENGTH = res.getInteger(R.integer.modelOutputShape);
         ANN = res.getStringArray(R.array.NSV_ANN);
-        interpreter = getTfliteInterpreter("540_model90.tflite");
+        //interpreter = getTfliteInterpreter("540_model90.tflite");
+        interpreter = getTfliteInterpreter("model0_train100_fortest.tflite");
 
 
         //notification
@@ -446,7 +447,7 @@ public class ServiceEcgProcess extends Service {
 
             StringBuilder sb = new StringBuilder();
             for (float s : originalEcg) {
-                sb.append(String.valueOf(s)).append(",");
+                sb.append(String.valueOf(s)).append("\n");
             }
             out.write(sb.toString());
             out.flush();
@@ -651,8 +652,12 @@ public class ServiceEcgProcess extends Service {
                     Log.d("testInterval_Default",String.valueOf(noiseFlag));
                     //predict
                     setInterval(interval);
+                    Log.i("0715_interval10",Arrays.toString(currentInterval10Array));
                     float[] inputEcg = minMaxScale(segment);
-                    float[] inputInterval = getInputInterval();
+                    //interval 10
+                    float[] inputInterval = currentInterval10Array;
+                    //interval 2
+                    //float[] inputInterval = getInputInterval2();
 
                     Log.i(TENSORFLOW_TAG+"__INPUT_SAMPLE",String.valueOf(inputEcg.length));
                     Log.i(TENSORFLOW_TAG+"__INPUT_INTERVAL",Arrays.toString(inputInterval));
@@ -759,22 +764,13 @@ public class ServiceEcgProcess extends Service {
                     //1
                     currentInterval1 = interval;
 
-                    int flag = currentInteval10Flag;
-                    //10
-                    if(flag<10){
-                        currentInterval10Array[flag] = interval;
+                    for(int i=0; i<(10-1); i++){
+                        currentInterval10Array[i] = currentInterval10Array[i+1];
+                    }
+                    currentInterval10Array[currentInterval10Array.length-1] = interval;
 
-                        flag += 1;
-                        currentInteval10Flag = flag;
-                    }
-                    else{
-                        for(int i=0; i<(10-1); i++){
-                            currentInterval10Array[i] = currentInterval10Array[i+1];
-                        }
-                        currentInterval10Array[currentInterval10Array.length-1] = interval;
-                    }
                 }
-                    private float[] getInputInterval(){
+                    private float[] getInputInterval2(){
                         float[] inputInterval = new float[2];
                         inputInterval[0] = currentInterval1;
 
@@ -797,9 +793,15 @@ public class ServiceEcgProcess extends Service {
 
             private float[][] predict(float[] inputSample,float[] inputInterval){
                 Log.v(FUNCTION_TAG,"user:predict()");
-
+                Log.i("0715_predictFunction",Arrays.toString(inputInterval));
                 float[][][] inputSampleTensor = inputSampleProcessing(inputSample);
-                float[][] inputIntervalTensor = inputIntervalProcessing(inputInterval);
+
+                //10 input
+                float[][] inputIntervalTensor = inputInterval10Processing(inputInterval);
+
+                //2 input
+                //float[][] inputIntervalTensor = inputInterval2Processing(inputInterval);
+                Log.i("0715_totensor",Arrays.deepToString(inputIntervalTensor));
 
                 Object[] inputs = {inputSampleTensor,inputIntervalTensor};
                 float[][] output = new float[1][OUTPUT_LENGTH];
@@ -807,7 +809,13 @@ public class ServiceEcgProcess extends Service {
                 outputs.put(0,output);
 
                 //Log.i(TENSORFLOW_TAG,Arrays.deepToString(output));
+
+                //sample ver
+                //interpreter.runForMultipleInputsOutputs(inputSampleTensor ,outputs);
+
+                //sample + interval(2/10) ver
                 interpreter.runForMultipleInputsOutputs(inputs,outputs);
+
                 //Log.i(TENSORFLOW_TAG,Arrays.deepToString(output));
                 Log.i(TENSORFLOW_TAG+"__result", String.valueOf(Arrays.toString(output[0])));
                 return output;
@@ -821,12 +829,24 @@ public class ServiceEcgProcess extends Service {
                     }
                     return input;
                 }
-                private float[][] inputIntervalProcessing(float[] data){
+                private float[][] inputInterval2Processing(float[] data){
                     float[][] input = new float[1][2];
-                    input[0][0] = currentInterval1;
-                    input[0][1] = currentInterval10;
+                    input[0][0] = data[0];
+                    input[0][1] = data[1];
                     return input;
                 }
+
+                private float[][] inputInterval10Processing(float[] data){
+                    float[][] input = new float[1][10];
+
+                    for(int i=0; i<data.length; i++){
+                        input[0][i] = data[i];
+                    }
+                    return input;
+                }
+
+
+
             //return high value index
             private int outputFlag(float[][] output){
                 float value = -1;

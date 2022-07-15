@@ -33,3 +33,14 @@
 -input : 540 (360 + 180)
 -output : 3 (aami _ n,s,v)
 -path = C:\sebin\lab\ecg2\git\ecg_data_wfdb\model\07_\0308\rDuration_Kfold40_80_sameData
+
+
+
+
+model0_train100_fortest.tflite
+-5~6월정도
+-two input (sample , interval10) / heavy model
+-100ep 
+-input : 540 (360 + 180)
+-output : 3 (aami _ n,s,v)
+-path = C:\sebin\lab\ecg2\git\ecg_data_wfdb\model\07_\0308\rDuration_Kfold40_80_sameData\model0_train90.tflite
