@@ -129,7 +129,7 @@ public class ServiceEcgProcess extends Service {
         //predict input에 들어가는 interval들(1개, 10개)
         float currentInterval1;
             float[] currentInterval10Array;
-                int currentInteval10Flag;
+
         float currentInterval10;
 
         //noise
@@ -187,7 +187,6 @@ public class ServiceEcgProcess extends Service {
         prevRpeakIndex = 0;
         currentInterval1 = 0;
         currentInterval10Array = new float[10];
-            currentInteval10Flag = 0;
 
 
 
@@ -240,6 +239,8 @@ public class ServiceEcgProcess extends Service {
                             //peakflag 저장
                             setPeakFlag(peakFlag);
                             Log.i("fordebugNoise_FLAG:",String.valueOf(noiseFlag));
+
+                            Log.i("0718_log1_prev_cntcntcntcnt", String.valueOf(windowCnt));
                             if( peakFlag == -128) {
                                 //peakflag 확인
                                 Log.d("fordebugNoise_currentPeakN:",Arrays.toString(currentPeakN));
@@ -463,23 +464,29 @@ public class ServiceEcgProcess extends Service {
 
         if(peakFlag < 0 ){
             //peak가 이전에 있을때
+            //error!
             if(checkPeakAvailableIndexsExcess(peakFlag)){
                 Log.v("fortest1",String.valueOf(peakFlag));
-                Log.i("0704_log1_previous",String.valueOf(peakFlag));
+                Log.i("0718_log1_previous",String.valueOf(peakFlag));
+                Log.i("0718_log1_previous", String.valueOf(dataFlag));
                 peakWindowCnt = windowCnt - 1 ;
-                peakIndex = WINDOW_LENGTH + peakFlag ;
+                peakIndex = WINDOW_LENGTH + dataFlag + peakFlag ;
+                Log.i("0718_log1_previous_cnt", String.valueOf(peakWindowCnt));
+                Log.i("0718_log1_previous_index", String.valueOf(peakIndex));
             }
             else{
                 //여기만 동작중  ?
                 Log.v("fortest2",String.valueOf(peakFlag));
-                Log.i("0704_log1_nex",String.valueOf(peakFlag));
+                Log.i("0718_log1_nex",String.valueOf(peakFlag));
+                Log.i("0718_log1_nex", String.valueOf(dataFlag));
                 peakWindowCnt = windowCnt;
                 peakIndex = dataFlag + peakFlag ;
+                Log.i("0718_log1_nex", String.valueOf(peakIndex));
             }
         }
         else{
             Log.v("fortest3",String.valueOf(peakFlag));
-            Log.i("0704_log1_current",String.valueOf(peakFlag));
+            Log.i("0718_current",String.valueOf(peakFlag));
             //peak가 현재  존재
             peakWindowCnt = windowCnt;
             peakIndex = dataFlag + peakFlag;
@@ -959,9 +966,6 @@ public class ServiceEcgProcess extends Service {
 
         }
     }
-
-
-
 
 
     private MappedByteBuffer loadModelFile(String modelPath) throws IOException {

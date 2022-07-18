@@ -384,7 +384,7 @@ public class ServiceBle extends Service {
     }
 
     //nordic용 parsing
-    //byte(int_2byte) -> int
+    //byte(uint_2byte) -> int
     private int[] parsing10bitByteArrayToIntArray(byte[] data){
         int[] parsingData = new int[data.length/2];
 
